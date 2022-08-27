@@ -1,0 +1,40 @@
+[tool.poetry]
+name = "YetAnotherPicSearch4Telegram"
+version = "0.0.1"
+description = "Yet Another Picture Search bot for Telegram"
+authors = ["NekoAria"]
+license = "GPL-3.0-only"
+readme = "README.md"
+packages = [
+    { include = "src" },
+]
+homepage = "https://github.com/NekoAria/YetAnotherPicSearch4Telegram"
+repository = "https://github.com/NekoAria/YetAnotherPicSearch4Telegram"
+keywords = ["telegram", "bot", "saucenao", "pixiv", "danbooru", "doujin", "anime", "ascii2d", "iqdb", "exhentai"]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+aiohttp = {extras = ["speedups"], version = "^3.8.1"}
+arrow = "^1.2.2"
+loguru = "^0.6.0"
+lxml = "^4.9.1"
+PicImageSearch = "^3.4.2"
+pydantic = {extras = ["dotenv"], version = "^1.9.2"}
+pyquery = "^1.4.3"
+Telethon = "^1.24.0"
+tenacity = "^8.0.1"
+yarl = "^1.8.1"
+
+[tool.poetry.dev-dependencies]
+
+[tool.mypy]
+python_version = "3.8"
+ignore_missing_imports = true
+implicit_reexport = true
+pretty = true
+show_error_codes = true
+strict = true
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
