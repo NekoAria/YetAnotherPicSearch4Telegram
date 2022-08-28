@@ -15,7 +15,7 @@
 
 于是我就想，干脆把最容易被干烂的搜图功能迁移到 Telegram 上吧。
 
-于是在 [YetAnotherPicSearch](https://github.com/NekoAria/YetAnotherPicSearch) 的基础上适配 Telethon ，便是本项目的由来，用来搜图、搜番、搜本子。
+在 [YetAnotherPicSearch](https://github.com/NekoAria/YetAnotherPicSearch) 的基础上适配 Telethon ，便是本项目的由来，用来搜图、搜番、搜本子。
 
 目前支持的搜图服务：
 
@@ -41,3 +41,7 @@
 - [cq-picsearcher-bot](https://github.com/Tsuk1ko/cq-picsearcher-bot)
 - [PicImageSearch](https://github.com/kitUIN/PicImageSearch)
 - [Telethon](https://github.com/LonamiWebs/Telethon)
+
+## Star History
+
+[![Star History](https://starchart.cc/NekoAria/YetAnotherPicSearch4Telegram.svg)](https://starchart.cc/NekoAria/YetAnotherPicSearch4Telegram)

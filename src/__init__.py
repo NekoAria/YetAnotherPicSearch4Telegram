@@ -53,7 +53,7 @@ def check_permission(
     return event.sender_id in allowed_users or event.chat_id in config.allowed_chats
 
 
-@bot.on(events.NewMessage(func=check_permission, pattern="/start"))  # type: ignore
+@bot.on(events.NewMessage(from_users=allowed_users, pattern="/start"))  # type: ignore
 async def start(event: events.NewMessage.Event) -> None:
     await event.reply("请发送图片，然后选择搜图模式")
 
@@ -100,14 +100,14 @@ async def get_search_results(event: events.CallbackQuery) -> None:
     msgs = await get_messages_to_search(reply_to_msg)
     if not event.is_private:
         await bot.delete_messages(peer_id, message_ids=reply_to_msg.id)
-    for msg in msgs:
-        tips_msg = await bot.send_message(peer_id, "正在进行搜索，请稍候", reply_to=msg)
-        network = (
-            Network(proxies=config.proxy, cookies=config.exhentai_cookies, timeout=60)
-            if event.data == b"EHentai"
-            else Network(proxies=config.proxy)
-        )
-        async with network as client:
+    network = (
+        Network(proxies=config.proxy, cookies=config.exhentai_cookies, timeout=60)
+        if event.data == b"EHentai"
+        else Network(proxies=config.proxy)
+    )
+    async with network as client:
+        for msg in msgs:
+            tips_msg = await bot.send_message(peer_id, "正在进行搜索，请稍候", reply_to=msg)
             try:
                 async for attempt in AsyncRetrying(
                     stop=(stop_after_attempt(3) | stop_after_delay(30)), reraise=True
@@ -122,11 +122,13 @@ async def get_search_results(event: events.CallbackQuery) -> None:
             except Exception as e:
                 logger.exception(e)
                 await bot.send_message(peer_id, f"该图搜图失败\nE: {repr(e)}", reply_to=msg)
-        await bot.delete_messages(peer_id, message_ids=tips_msg.id)
+            await bot.delete_messages(peer_id, message_ids=tips_msg.id)
 
 
 async def get_messages_to_search(msg: Message) -> List[Message]:
-    msgs: List[Message] = await bot.get_messages(msg.peer_id, ids=[msg.reply_to.reply_to_msg_id])
+    msgs: List[Message] = await bot.get_messages(
+        msg.peer_id, ids=[msg.reply_to.reply_to_msg_id]
+    )
     if grouped_id := msgs[0].grouped_id:
         first_msg_id = msgs[0].id
         msgs = []
@@ -178,5 +180,8 @@ async def send_search_results(
 
 
 def main() -> None:
+    if not config.saucenao_api_key:
+        logger.warning("请配置 saucenao_api_key")
+        return
     logger.info("Bot started")
     bot.run_until_disconnected()

@@ -1,15 +1,12 @@
 import itertools
 from collections import defaultdict
 from difflib import SequenceMatcher
-from typing import Any, Dict, List, Optional, Tuple, Union
+from typing import Any, Dict, List, Optional, Tuple
 
-import aiohttp
 import arrow
 from aiohttp import ClientSession
-from lxml.html import HTMLParser, fromstring
 from PicImageSearch import EHentai
-from PicImageSearch.model import EHentaiItem, EHentaiResponse
-from pyquery import PyQuery
+from PicImageSearch.model import EHentaiResponse
 
 from .config import config
 from .utils import get_image_bytes_by_url
@@ -17,19 +14,6 @@ from .utils import get_image_bytes_by_url
 EHENTAI_HEADERS = (
     {"Cookie": config.exhentai_cookies} if config.exhentai_cookies else None
 )
-
-
-class EHentaiResponseAioHttp:
-    def __init__(self, resp_text: str, resp_url: str):
-        self.origin: str = resp_text
-        utf8_parser = HTMLParser(encoding="utf-8")
-        data = PyQuery(fromstring(self.origin, parser=utf8_parser))
-        self.raw: List[EHentaiItem] = [
-            EHentaiItem(i)
-            for i in data.find(".itg").children("tr").items()
-            if i.children("td")
-        ]
-        self.url: str = resp_url
 
 
 async def ehentai_search(
@@ -40,9 +24,9 @@ async def ehentai_search(
     if res := await ehentai.search(file=file, ex=ex):
         if not res.raw:
             # 如果第一次没找到，使搜索结果包含被删除的部分，并重新搜索
-            async with aiohttp.ClientSession(headers=EHENTAI_HEADERS) as session:
+            async with ClientSession(headers=EHENTAI_HEADERS) as session:
                 resp = await session.get(f"{res.url}&fs_exp=on", proxy=config.proxy)
-                res = EHentaiResponseAioHttp(await resp.text(), str(resp.url))
+                res = EHentaiResponse(await resp.text(), str(resp.url))
         return await search_result_filter(res)
     return [("EHentai 暂时无法使用", None)]
 
@@ -50,9 +34,9 @@ async def ehentai_search(
 async def ehentai_title_search(title: str) -> List[Tuple[str, Optional[bytes]]]:
     url = "https://exhentai.org" if config.exhentai_cookies else "https://e-hentai.org"
     params: Dict[str, Any] = {"f_search": title}
-    async with aiohttp.ClientSession(headers=EHENTAI_HEADERS) as session:
+    async with ClientSession(headers=EHENTAI_HEADERS) as session:
         resp = await session.get(url, proxy=config.proxy, params=params)
-        if res := EHentaiResponseAioHttp(await resp.text(), str(resp.url)):
+        if res := EHentaiResponse(await resp.text(), str(resp.url)):
             if not res.raw:
                 # 如果第一次没找到，使搜索结果包含被删除的部分，并重新搜索
                 params["advsearch"] = 1
@@ -60,7 +44,7 @@ async def ehentai_title_search(title: str) -> List[Tuple[str, Optional[bytes]]]:
                 params["f_stags"] = "on"
                 params["f_sh"] = "on"
                 resp = await session.get(url, proxy=config.proxy, params=params)
-                res = EHentaiResponseAioHttp(await resp.text(), str(resp.url))
+                res = EHentaiResponse(await resp.text(), str(resp.url))
             # 只保留标题和搜索关键词相关度较高的结果，并排序，以此来提高准确度
             if res.raw:
                 raw_with_ratio = [
@@ -74,7 +58,7 @@ async def ehentai_title_search(title: str) -> List[Tuple[str, Optional[bytes]]]:
 
 
 async def search_result_filter(
-    res: Union[EHentaiResponse, EHentaiResponseAioHttp],
+    res: EHentaiResponse,
 ) -> List[Tuple[str, Optional[bytes]]]:
     if not res.raw:
         return [(f"EHentai 搜索结果为空\n[搜索页面]({res.url})", None)]
@@ -87,7 +71,7 @@ async def search_result_filter(
     priority["Cosplay"] = 5
     priority["Asian Porn"] = 6
     res.raw.sort(key=lambda x: priority[x.type], reverse=True)
-    for key, group in itertools.groupby(res.raw, key=lambda x: x.type):
+    for key, group in itertools.groupby(res.raw, key=lambda x: x.type):  # type: ignore
         group_list = list(group)
         if priority[key] > 0 and len(res.raw) != len(group_list):
             res.raw = [i for i in res.raw if i not in group_list]

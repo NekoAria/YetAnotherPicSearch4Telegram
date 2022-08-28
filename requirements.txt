@@ -1,7 +1,6 @@
 aiohttp[speedups]~=3.8.1
 arrow~=1.2.2
 loguru~=0.6.0
-lxml~=4.9.1
 PicImageSearch~=3.4.2
 pydantic[dotenv]~=1.9.2
 pyquery~=1.4.3

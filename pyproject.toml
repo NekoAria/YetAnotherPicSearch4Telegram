@@ -1,12 +1,12 @@
 [tool.poetry]
 name = "YetAnotherPicSearch4Telegram"
-version = "0.0.1"
+version = "1.0.0"
 description = "Yet Another Picture Search bot for Telegram"
 authors = ["NekoAria"]
 license = "GPL-3.0-only"
 readme = "README.md"
 packages = [
-    { include = "src" },
+    { include = "YetAnotherPicSearch4Telegram" },
 ]
 homepage = "https://github.com/NekoAria/YetAnotherPicSearch4Telegram"
 repository = "https://github.com/NekoAria/YetAnotherPicSearch4Telegram"
@@ -17,7 +17,6 @@ python = "^3.8"
 aiohttp = {extras = ["speedups"], version = "^3.8.1"}
 arrow = "^1.2.2"
 loguru = "^0.6.0"
-lxml = "^4.9.1"
 PicImageSearch = "^3.4.2"
 pydantic = {extras = ["dotenv"], version = "^1.9.2"}
 pyquery = "^1.4.3"
