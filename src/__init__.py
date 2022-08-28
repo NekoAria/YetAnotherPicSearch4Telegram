@@ -74,7 +74,9 @@ async def is_mentioned_or_is_command(
 async def handle_photo_messages(
     event: Union[events.NewMessage.Event, events.Album.Event]
 ) -> None:
-    if not event.is_private and not await is_mentioned_or_is_command(event):
+    if (event.is_group or event.is_channel) and not await is_mentioned_or_is_command(
+        event
+    ):
         return
     if isinstance(event, events.NewMessage.Event) and not event.photo:
         if event.is_reply:
