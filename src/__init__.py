@@ -24,6 +24,7 @@ proxy = (
 bot = TelegramClient("bot", config.api_id, config.api_hash, proxy=proxy).start(
     bot_token=config.token
 )
+bot.parse_mode = "html"
 bot_name = ""
 allowed_users = [config.owner_id] + config.allowed_users
 search_buttons = [

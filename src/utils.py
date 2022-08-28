@@ -34,3 +34,7 @@ async def get_source(url: str) -> str:
                     html = await resp.text()
                     source = PyQuery(html)("#post_source").attr("value")
     return source
+
+
+def get_hyperlink(text: str, href: str) -> str:
+    return f"<a href={href}>{text}</a>"

@@ -3,11 +3,12 @@ from typing import List, Optional, Tuple
 
 from aiohttp import ClientSession
 from PicImageSearch import SauceNAO
+from yarl import URL
 
 from .ascii2d import ascii2d_search
 from .config import config
 from .ehentai import ehentai_title_search
-from .utils import get_image_bytes_by_url, get_source
+from .utils import get_hyperlink, get_image_bytes_by_url, get_source
 from .whatanime import whatanime_search
 
 
@@ -63,6 +64,11 @@ async def saucenao_search(
             source = selected_res.origin["data"]["source"]
         else:
             source = await get_source(selected_res.url)
+        if source:
+            if URL(source).host:
+                source = get_hyperlink("来源", source)
+            else:
+                source = f"来源：{source}"
         # 如果结果为 doujin ，尝试返回日文标题而不是英文标题
         if selected_res.index_id in saucenao_db["doujin"]:  # type: ignore
             if title := (
@@ -75,7 +81,7 @@ async def saucenao_search(
             selected_res.title,
             f"作者：{selected_res.author}" if selected_res.author else "",
             selected_res.url,
-            f"来源：{source}" if source else "",
+            source,
         ]
         if res.long_remaining < 10:
             final_res.append((f"SauceNAO 24h 内仅剩 {res.long_remaining} 次使用次数", None))

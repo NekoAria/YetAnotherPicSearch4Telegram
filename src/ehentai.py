@@ -2,6 +2,7 @@ import itertools
 from collections import defaultdict
 from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Tuple
+from urllib.parse import unquote
 
 import arrow
 from aiohttp import ClientSession
@@ -9,7 +10,7 @@ from PicImageSearch import EHentai
 from PicImageSearch.model import EHentaiResponse
 
 from .config import config
-from .utils import get_image_bytes_by_url
+from .utils import get_hyperlink, get_image_bytes_by_url
 
 EHENTAI_HEADERS = (
     {"Cookie": config.exhentai_cookies} if config.exhentai_cookies else None
@@ -90,13 +91,14 @@ async def search_result_filter(
         selected_res.thumbnail, cookies=config.exhentai_cookies
     )
     date = arrow.get(selected_res.date).to("Asia/Shanghai").format("YYYY-MM-DD HH:mm")
+    _url = unquote(res.url)
     res_list = [
         "EHentai 搜索结果",
         selected_res.title,
         f"类型：{selected_res.type}",
         f"日期：{date}",
-        f"[来源]({selected_res.url})",
-        f"[搜索页面]({res.url})",
+        get_hyperlink("来源", selected_res.url),
+        get_hyperlink("搜索页面", _url),
     ]
     return [
         (

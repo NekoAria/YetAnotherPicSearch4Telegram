@@ -5,7 +5,7 @@ from PicImageSearch import Ascii2D
 from PicImageSearch.model import Ascii2DResponse
 
 from .config import config
-from .utils import get_image_bytes_by_url
+from .utils import get_hyperlink, get_image_bytes_by_url
 
 
 async def ascii2d_search(
@@ -28,8 +28,8 @@ async def ascii2d_search(
         res_list = [
             res.raw[0].title or "",
             f"作者：{res.raw[0].author}" if res.raw[0].author else "",
-            f"[来源]({res.raw[0].url})",
-            f"[搜索页面]({res.url})",
+            get_hyperlink("来源", res.raw[0].url),
+            get_hyperlink("搜索页面", res.url),
         ]
         return [i for i in res_list if i != ""], thumbnail
 
