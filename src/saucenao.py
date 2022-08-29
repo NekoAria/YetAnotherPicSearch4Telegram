@@ -76,10 +76,16 @@ async def saucenao_search(
                 or selected_res.origin["data"].get("eng_name")
             ):
                 selected_res.title = title
+        author = selected_res.author
+        if author and selected_res.index_id == saucenao_db["pixiv"]:
+            author = get_hyperlink(
+                author,
+                f'https://www.pixiv.net/users/{selected_res.origin["data"]["member_id"]}',
+            )
         res_list = [
             f"SauceNAO（{selected_res.similarity}%）",
             selected_res.title,
-            f"作者：{selected_res.author}" if selected_res.author else "",
+            f"作者：{author}" if author else "",
             selected_res.url,
             source,
         ]

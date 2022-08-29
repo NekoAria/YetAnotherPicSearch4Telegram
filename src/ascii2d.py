@@ -22,13 +22,15 @@ async def ascii2d_search(
         bovw_res = Ascii2DResponse(await resp.text(), str(resp.url))
 
     async def get_final_res(res: Ascii2DResponse) -> Tuple[List[str], Optional[bytes]]:
-        if not res.raw[0].url:
-            res.raw[0] = res.raw[1]
-        thumbnail = await get_image_bytes_by_url(res.raw[0].thumbnail)
+        selected_res = [i for i in res.raw if i.title or i.url][0]
+        thumbnail = await get_image_bytes_by_url(selected_res.thumbnail)
+        author = selected_res.author
+        if author and selected_res.author_url:
+            author = get_hyperlink(author, selected_res.author_url)
         res_list = [
-            res.raw[0].title or "",
-            f"作者：{res.raw[0].author}" if res.raw[0].author else "",
-            get_hyperlink("来源", res.raw[0].url),
+            selected_res.title,
+            f"作者：{author}" if author else "",
+            get_hyperlink("来源", selected_res.url) if selected_res.url else "",
             get_hyperlink("搜索页面", res.url),
         ]
         return [i for i in res_list if i != ""], thumbnail
