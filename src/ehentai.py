@@ -62,7 +62,8 @@ async def search_result_filter(
     res: EHentaiResponse,
 ) -> List[Tuple[str, Optional[bytes]]]:
     if not res.raw:
-        return [(f"EHentai 搜索结果为空\n[搜索页面]({res.url})", None)]
+        _url = get_hyperlink("搜索页面", res.url)
+        return [(f"EHentai 搜索结果为空\n{_url}", None)]
     # 尽可能过滤掉非预期结果(大概
     priority = defaultdict(lambda: 0)
     priority["Image Set"] = 1
