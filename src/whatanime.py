@@ -1,5 +1,5 @@
 import math
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Tuple, Union
 
 from aiohttp import ClientSession
 from PicImageSearch import TraceMoe
@@ -9,7 +9,7 @@ from .utils import get_image_bytes_by_url
 
 async def whatanime_search(
     file: bytes, client: ClientSession
-) -> List[Tuple[str, Optional[bytes]]]:
+) -> List[Tuple[str, Union[str, bytes, None]]]:
     whatanime = TraceMoe(client=client)
     res = await whatanime.search(file=file)
     if res and res.raw:

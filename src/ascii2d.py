@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple
+from typing import List, Optional, Tuple, Union
 
 from aiohttp import ClientSession
 from PicImageSearch import Ascii2D
@@ -10,7 +10,7 @@ from .utils import get_hyperlink, get_image_bytes_by_url
 
 async def ascii2d_search(
     file: bytes, client: ClientSession
-) -> List[Tuple[str, Optional[bytes]]]:
+) -> List[Tuple[str, Union[str, bytes, None]]]:
     ascii2d_color = Ascii2D(client=client)
     color_res = await ascii2d_color.search(file=file)
     if not color_res or not color_res.raw:

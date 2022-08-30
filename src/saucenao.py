@@ -1,5 +1,5 @@
 import re
-from typing import List, Optional, Tuple
+from typing import List, Tuple, Union
 
 from aiohttp import ClientSession
 from PicImageSearch import SauceNAO
@@ -14,7 +14,7 @@ from .whatanime import whatanime_search
 
 async def saucenao_search(
     file: bytes, mode: str, client: ClientSession
-) -> List[Tuple[str, Optional[bytes]]]:
+) -> List[Tuple[str, Union[str, bytes, None]]]:
     saucenao_db = {
         "all": 999,
         "pixiv": 5,
@@ -35,7 +35,7 @@ async def saucenao_search(
             db=db,
         )
     res = await saucenao.search(file=file)
-    final_res: List[Tuple[str, Optional[bytes]]] = []
+    final_res: List[Tuple[str, Union[str, bytes, None]]] = []
     if res and res.raw:
         selected_res = res.raw[0]
         ext_urls = selected_res.origin["data"].get("ext_urls")

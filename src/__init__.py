@@ -1,4 +1,4 @@
-from typing import List, Optional, Tuple, Union
+from typing import List, Tuple, Union
 
 from aiohttp import ClientSession
 from loguru import logger
@@ -147,7 +147,7 @@ async def get_messages_to_search(msg: Message) -> List[Message]:
 
 async def handle_search(
     event_data: bytes, file: bytes, client: ClientSession
-) -> List[Tuple[str, Optional[bytes]]]:
+) -> List[Tuple[str, Union[str, bytes, None]]]:
     if event_data == b"Ascii2D":
         return await ascii2d_search(file=file, client=client)
     elif event_data == b"Iqdb":
@@ -174,7 +174,7 @@ async def send_search_results(
     send_to: int,
     caption: str,
     reply_to: Message,
-    file: Optional[bytes] = None,
+    file: Union[str, bytes, None] = None,
 ) -> None:
     if file:
         await _bot.send_file(send_to, file=file, caption=caption, reply_to=reply_to)
