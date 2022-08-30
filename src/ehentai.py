@@ -2,7 +2,6 @@ import itertools
 from collections import defaultdict
 from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Tuple
-from urllib.parse import unquote
 
 import arrow
 from aiohttp import ClientSession
@@ -92,14 +91,13 @@ async def search_result_filter(
         selected_res.thumbnail, cookies=config.exhentai_cookies
     )
     date = arrow.get(selected_res.date).to("Asia/Shanghai").format("YYYY-MM-DD HH:mm")
-    _url = unquote(res.url)
     res_list = [
         "EHentai 搜索结果",
         selected_res.title,
         f"类型：{selected_res.type}",
         f"日期：{date}",
         get_hyperlink("来源", selected_res.url),
-        get_hyperlink("搜索页面", _url),
+        get_hyperlink("搜索页面", res.url),
     ]
     return [
         (
