@@ -25,7 +25,7 @@ async def iqdb_search(
         selected_res = danbooru_res_list[0]
     elif yandere_res_list:
         selected_res = yandere_res_list[0]
-    source = await get_source(selected_res.url) if selected_res.url else ""
+    source = await get_source(selected_res.url)
     if source:
         if URL(source).host:
             source = get_hyperlink("来源", source)

@@ -61,9 +61,7 @@ async def saucenao_search(
                 if "danbooru" in i:
                     selected_res.url = i
         thumbnail = await get_image_bytes_by_url(selected_res.thumbnail)
-        if selected_res.origin["data"].get("source"):
-            source = selected_res.origin["data"]["source"]
-        else:
+        if not (source := selected_res.origin["data"].get("source", "")):
             source = await get_source(selected_res.url)
         if source:
             if URL(source).host:
