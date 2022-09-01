@@ -38,3 +38,32 @@ async def get_source(url: str) -> str:
 
 def get_hyperlink(text: str, href: str) -> str:
     return f"<a href={href}>{text}</a>"
+
+
+async def get_first_frame_from_video(video: bytes) -> Optional[bytes]:
+    async with ClientSession() as session:
+        resp = await session.post(
+            "https://file.io", data={"file": video}, proxy=config.proxy
+        )
+        link = (await resp.json())["link"]
+        resp = await session.get(
+            "https://ezgif.com/video-to-jpg",
+            params={"url": link},
+            proxy=config.proxy,
+        )
+        d = PyQuery(await resp.text())
+        next_url = d("form").attr("action")
+        file = d("form > input[type=hidden]").attr("value")
+        data = {
+            "file": file,
+            "start": "0",
+            "end": "1",
+            "size": "original",
+            "fps": "10",
+        }
+        resp = await session.post(
+            next_url, params={"ajax": "true"}, data=data, proxy=config.proxy
+        )
+        d = PyQuery(await resp.text())
+        first_frame_img_url = "https:" + d("img:nth-child(1)").attr("src")
+        return await get_image_bytes_by_url(first_frame_img_url)

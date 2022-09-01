@@ -13,7 +13,7 @@ from .whatanime import whatanime_search
 
 
 async def saucenao_search(
-    file: bytes, mode: str, client: ClientSession
+    file: bytes, client: ClientSession, mode: str
 ) -> List[Tuple[str, Union[str, bytes, None]]]:
     saucenao_db = {
         "all": 999,

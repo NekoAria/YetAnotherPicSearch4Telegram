@@ -1,4 +1,4 @@
-from typing import List, Tuple, Union
+from typing import Any, List, Tuple, Union
 
 from aiohttp import ClientSession
 from loguru import logger
@@ -7,7 +7,7 @@ from telethon import TelegramClient, events
 from telethon.events import CallbackQuery
 from telethon.tl.custom import Button
 from telethon.tl.patched import Message
-from tenacity import AsyncRetrying, stop_after_attempt, stop_after_delay
+from tenacity import retry, stop_after_attempt, stop_after_delay
 from yarl import URL
 
 from .ascii2d import ascii2d_search
@@ -15,7 +15,7 @@ from .config import config
 from .ehentai import ehentai_search
 from .iqdb import iqdb_search
 from .saucenao import saucenao_search
-from .utils import get_image_bytes_by_url
+from .utils import get_first_frame_from_video, get_image_bytes_by_url
 from .whatanime import whatanime_search
 
 proxy = (
@@ -90,17 +90,19 @@ async def handle_photo_messages(
             )
     elif (
         isinstance(event, events.NewMessage.Event)
-        and event.photo
-        and not event.grouped_id
+        and ((event.photo and not event.grouped_id) or getattr(event, "video", None))
     ) or (isinstance(event, events.Album.Event)):
         await event.reply("请选择搜图模式", buttons=search_buttons)
 
 
 @bot.on(CallbackQuery(func=check_permission))  # type: ignore
-async def get_search_results(event: events.CallbackQuery) -> None:
+async def handle_search(event: events.CallbackQuery) -> None:
     reply_to_msg = await event.get_message()
     peer_id = reply_to_msg.peer_id
     msgs = await get_messages_to_search(reply_to_msg)
+    if not msgs:
+        await bot.send_message(peer_id, "没有获取到图片或视频", reply_to=reply_to_msg)
+        return
     if not event.is_private:
         await bot.delete_messages(peer_id, message_ids=reply_to_msg.id)
     network = (
@@ -112,20 +114,34 @@ async def get_search_results(event: events.CallbackQuery) -> None:
         for msg in msgs:
             tips_msg = await bot.send_message(peer_id, "正在进行搜索，请稍候", reply_to=msg)
             try:
-                async for attempt in AsyncRetrying(
-                    stop=(stop_after_attempt(3) | stop_after_delay(30)), reraise=True
-                ):
-                    with attempt:
-                        file = await bot.download_media(msg.photo, file=bytes)
-                        results = await handle_search(event.data, file, client)
-                        for caption, file in results:
-                            await send_search_results(
-                                bot, peer_id, caption, msg, file=file
-                            )
+                results = await get_search_results(msg, peer_id, event.data, client)
+                if not results:
+                    await bot.delete_messages(peer_id, message_ids=tips_msg.id)
+                for caption, file in results:
+                    await send_search_results(bot, peer_id, caption, msg, file=file)
             except Exception as e:
                 logger.exception(e)
                 await bot.send_message(peer_id, f"该图搜图失败\nE: {repr(e)}", reply_to=msg)
             await bot.delete_messages(peer_id, message_ids=tips_msg.id)
+
+
+@retry(stop=(stop_after_attempt(3) | stop_after_delay(30)), reraise=True)
+async def get_search_results(
+    msg: Message, peer_id: Any, event_data: bytes, client: ClientSession
+) -> List[Tuple[str, Union[str, bytes, None]]]:
+    if video := msg.video:
+        if video.size > 10 * 1024 * 1024:
+            await bot.send_message(peer_id, "跳过超过 10M 的视频", reply_to=msg)
+            return []
+        file = await get_first_frame_from_video(
+            await bot.download_media(video, file=bytes)
+        )
+    else:
+        file = await bot.download_media(msg.photo, file=bytes)
+    if not file:
+        await bot.send_message(peer_id, "图片或视频获取失败", reply_to=msg)
+        return []
+    return await handle_search_mode(event_data, file, client)
 
 
 async def get_messages_to_search(msg: Message) -> List[Message]:
@@ -138,34 +154,36 @@ async def get_messages_to_search(msg: Message) -> List[Message]:
         for i in await bot.get_messages(
             msg.peer_id, ids=list(range(first_msg_id, first_msg_id + 100))
         ):
-            if not i or not i.photo:
+            if not i or (not i.photo and not i.video):
                 break
-            elif hasattr(i, "grouped_id") and i.grouped_id == grouped_id:
+            elif getattr(i, "grouped_id", None) == grouped_id:
                 msgs.append(i)
+    elif not any((msgs[0].photo, msgs[0].video)):
+        return []
     return msgs
 
 
-async def handle_search(
+async def handle_search_mode(
     event_data: bytes, file: bytes, client: ClientSession
 ) -> List[Tuple[str, Union[str, bytes, None]]]:
     if event_data == b"Ascii2D":
-        return await ascii2d_search(file=file, client=client)
+        return await ascii2d_search(file, client)
     elif event_data == b"Iqdb":
-        return await iqdb_search(file=file, client=client)
+        return await iqdb_search(file, client)
     elif event_data == b"WhatAnime":
-        return await whatanime_search(file=file, client=client)
+        return await whatanime_search(file, client)
     elif event_data == b"EHentai":
-        return await ehentai_search(file=file, client=client)
+        return await ehentai_search(file, client)
     elif event_data == b"SauceNAO":
-        return await saucenao_search(file=file, mode="all", client=client)
+        return await saucenao_search(file, client, "all")
     elif event_data == b"Pixiv":
-        return await saucenao_search(file=file, mode="pixiv", client=client)
+        return await saucenao_search(file, client, "pixiv")
     elif event_data == b"Danbooru":
-        return await saucenao_search(file=file, mode="danbooru", client=client)
+        return await saucenao_search(file, client, "danbooru")
     elif event_data == b"Anime":
-        return await saucenao_search(file=file, mode="anime", client=client)
+        return await saucenao_search(file, client, "anime")
     elif event_data == b"Doujin":
-        return await saucenao_search(file=file, mode="doujin", client=client)
+        return await saucenao_search(file, client, "doujin")
     return []
 
 
