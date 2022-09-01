@@ -33,7 +33,7 @@ async def iqdb_search(
             source = f"来源：{source}"
     res_list = [
         f"Iqdb（{selected_res.similarity}%）",
-        selected_res.url or "",
+        get_hyperlink(selected_res.source, selected_res.url),
         source,
     ]
     return [
