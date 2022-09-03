@@ -28,12 +28,11 @@ async def iqdb_search(
     source = await get_source(selected_res.url)
     if source:
         if URL(source).host:
-            source = get_hyperlink("来源", source)
-        else:
-            source = f"来源：{source}"
+            source = get_hyperlink(source)
+        source = f"Source: {source}"
     res_list = [
-        f"Iqdb（{selected_res.similarity}%）",
-        get_hyperlink(selected_res.source, selected_res.url),
+        f"Iqdb ({selected_res.similarity}%)",
+        get_hyperlink(selected_res.url),
         source,
     ]
     return [

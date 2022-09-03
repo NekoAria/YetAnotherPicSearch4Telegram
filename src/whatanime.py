@@ -32,13 +32,13 @@ async def whatanime_search(
             end_date = date_to_str(res.raw[0].end_date)
         episode = res.raw[0].episode or 1
         res_list = [
-            f"WhatAnime（{res.raw[0].similarity}%）",
-            f"该截图出自第 {episode} 集的 {time_str}",
+            f"WhatAnime ({res.raw[0].similarity}%)",
+            f"Episode {episode} {time_str}",
             chinese_title,
             native_title,
-            f"类型：{res.raw[0].type}-{res.raw[0].format}",
-            f"开播：{start_date}",
-            f"完结：{end_date}" if end_date else "",
+            f"Type: {res.raw[0].type}-{res.raw[0].format}",
+            f"Start: {start_date}",
+            f"End: {end_date}" if end_date else "",
         ]
         return [("\n".join([i for i in res_list if i != ""]), thumbnail)]
     return [("WhatAnime 暂时无法使用", None)]

@@ -64,8 +64,8 @@ async def search_result_filter(
     res: EHentaiResponse,
 ) -> List[Tuple[str, Union[str, bytes, None]]]:
     if not res.raw:
-        _url = get_hyperlink("搜索页面", res.url)
-        return [(f"EHentai 搜索结果为空\n{_url}", None)]
+        _url = get_hyperlink(res.url)
+        return [(f"EHentai 搜索结果为空\nVia: {_url}", None)]
     # 尽可能过滤掉非预期结果(大概
     priority = defaultdict(lambda: 0)
     priority["Image Set"] = 1
@@ -93,14 +93,14 @@ async def search_result_filter(
     thumbnail = await get_image_bytes_by_url(
         selected_res.thumbnail, cookies=config.exhentai_cookies
     )
-    date = arrow.get(selected_res.date).to("Asia/Shanghai").format("YYYY-MM-DD HH:mm")
+    date = arrow.get(selected_res.date).to("local").format("YYYY-MM-DD HH:mm")
     res_list = [
         "EHentai 搜索结果",
         selected_res.title,
-        f"类型：{selected_res.type}",
-        f"日期：{date}",
-        get_hyperlink("来源", selected_res.url),
-        get_hyperlink("搜索页面", res.url),
+        f"Type: {selected_res.type}",
+        f"Date: {date}",
+        f"Source: {get_hyperlink(selected_res.url)}",
+        f"Via: {get_hyperlink(res.url)}",
     ]
     return [
         (

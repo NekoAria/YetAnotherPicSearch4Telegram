@@ -36,7 +36,14 @@ async def get_source(url: str) -> str:
     return source
 
 
-def get_hyperlink(text: str, href: str) -> str:
+def get_hyperlink(href: str, text: Optional[str] = None) -> str:
+    if not text:
+        host = str(URL(href).host)
+        if "danbooru" in host:
+            text = "danbooru"
+        else:
+            host_split = host.split(".")
+            text = host_split[1] if len(host_split) >= 3 else host_split[0]
     return f"<a href={href}>{text}</a>"
 
 

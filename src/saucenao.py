@@ -65,9 +65,8 @@ async def saucenao_search(
             source = await get_source(selected_res.url)
         if source:
             if URL(source).host:
-                source = get_hyperlink("来源", source)
-            else:
-                source = f"来源：{source}"
+                source = get_hyperlink(source)
+            source = f"Source: {source}"
         # 如果结果为 doujin ，尝试返回日文标题而不是英文标题
         if selected_res.index_id in saucenao_db["doujin"]:  # type: ignore
             if title := (
@@ -82,9 +81,9 @@ async def saucenao_search(
                 f'https://www.pixiv.net/users/{selected_res.origin["data"]["member_id"]}',
             )
         res_list = [
-            f"SauceNAO（{selected_res.similarity}%）",
+            f"SauceNAO ({selected_res.similarity}%)",
             selected_res.title,
-            f"作者：{author}" if author else "",
+            f"Author: {author}" if author else "",
             selected_res.url,
             source,
         ]

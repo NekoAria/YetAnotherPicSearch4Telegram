@@ -26,12 +26,13 @@ async def ascii2d_search(
         thumbnail = await get_image_bytes_by_url(selected_res.thumbnail)
         author = selected_res.author
         if author and selected_res.author_url:
-            author = get_hyperlink(author, selected_res.author_url)
+            author = get_hyperlink(selected_res.author_url, author)
         res_list = [
             selected_res.title,
-            f"作者：{author}" if author else "",
-            get_hyperlink("来源", selected_res.url) if selected_res.url else "",
-            get_hyperlink("搜索页面", res.url),
+            selected_res.detail,
+            f"Author: {author}" if author else "",
+            f"Source: {get_hyperlink(selected_res.url)}" if selected_res.url else "",
+            f"Via: {get_hyperlink(res.url)}",
         ]
         return [i for i in res_list if i != ""], thumbnail
 
