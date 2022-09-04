@@ -15,7 +15,7 @@ keywords = ["telegram", "bot", "saucenao", "pixiv", "danbooru", "doujin", "anime
 [tool.poetry.dependencies]
 python = "^3.8"
 aiohttp = {extras = ["speedups"], version = "^3.8.1"}
-arrow = "^1.2.2"
+arrow = "^1.2.3"
 loguru = "^0.6.0"
 PicImageSearch = "^3.4.4"
 pydantic = {extras = ["dotenv"], version = "^1.10.1"}
