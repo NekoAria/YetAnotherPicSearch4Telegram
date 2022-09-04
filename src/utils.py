@@ -37,8 +37,7 @@ async def get_source(url: str) -> str:
 
 
 def get_hyperlink(href: str, text: Optional[str] = None) -> str:
-    if not text:
-        host = str(URL(href).host)
+    if not text and (host := URL(href).host):
         if "danbooru" in host:
             text = "danbooru"
         else:

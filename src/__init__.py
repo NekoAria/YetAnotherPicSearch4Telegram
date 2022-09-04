@@ -15,7 +15,7 @@ from .config import config
 from .ehentai import ehentai_search
 from .iqdb import iqdb_search
 from .saucenao import saucenao_search
-from .utils import get_first_frame_from_video, get_image_bytes_by_url
+from .utils import get_first_frame_from_video
 from .whatanime import whatanime_search
 
 proxy = (
@@ -25,8 +25,8 @@ bot = TelegramClient("bot", config.api_id, config.api_hash, proxy=proxy).start(
     bot_token=config.token
 )
 bot.parse_mode = "html"
-bot_name = ""
 allowed_users = [config.owner_id] + config.allowed_users
+search_mode_tips = "请选择搜图模式"
 search_buttons = [
     [
         Button.inline("Ascii2D"),
@@ -59,40 +59,37 @@ async def start(event: events.NewMessage.Event) -> None:
     await event.reply("请发送图片，然后选择搜图模式")
 
 
-async def is_mentioned_or_is_command(
+def is_mentioned_or_get_command(
     event: Union[events.NewMessage.Event, events.Album.Event]
 ) -> bool:
-    global bot_name
-    if not bot_name:
-        bot_name = (await bot.get_me()).username
-    if f"@{bot_name}" in event.text or "搜图" in event.text:
+    if event.mentioned or "搜图" in event.text:
         return True
     return False
 
 
 @bot.on(events.NewMessage(func=check_permission))  # type: ignore
-@bot.on(events.Album(func=check_permission))  # type: ignore
-async def handle_photo_messages(
-    event: Union[events.NewMessage.Event, events.Album.Event]
-) -> None:
-    if (event.is_group or event.is_channel) and not await is_mentioned_or_is_command(
-        event
-    ):
+async def handle_photo_or_video_message(event: events.NewMessage.Event) -> None:
+    if (event.is_group or event.is_channel) and not is_mentioned_or_get_command(event):
         return
-    if isinstance(event, events.NewMessage.Event) and not event.photo:
-        if event.is_reply:
-            reply_to_msg = await event.get_reply_message()
-            await bot.send_message(
-                reply_to_msg.peer_id,
-                "请选择搜图模式",
-                buttons=search_buttons,
-                reply_to=reply_to_msg,
-            )
-    elif (
-        isinstance(event, events.NewMessage.Event)
-        and ((event.photo and not event.grouped_id) or getattr(event, "video", None))
-    ) or (isinstance(event, events.Album.Event)):
-        await event.reply("请选择搜图模式", buttons=search_buttons)
+    if event.grouped_id:
+        return
+    if event.photo or getattr(event, "video", None):
+        await event.reply(search_mode_tips, buttons=search_buttons)
+    elif event.is_reply:
+        reply_to_msg = await event.get_reply_message()
+        await bot.send_message(
+            reply_to_msg.peer_id,
+            search_mode_tips,
+            buttons=search_buttons,
+            reply_to=reply_to_msg,
+        )
+
+
+@bot.on(events.Album(func=check_permission))  # type: ignore
+async def handle_album_message(event: events.Album.Event) -> None:
+    if (event.is_group or event.is_channel) and not is_mentioned_or_get_command(event):
+        return
+    await event.reply(search_mode_tips, buttons=search_buttons)
 
 
 @bot.on(CallbackQuery(func=check_permission))  # type: ignore
