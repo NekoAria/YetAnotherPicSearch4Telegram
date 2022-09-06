@@ -12,7 +12,7 @@ async def iqdb_search(
 ) -> List[Tuple[str, Union[str, bytes, None]]]:
     iqdb = Iqdb(client=client)
     res = await iqdb.search(file=file)
-    if not res or not res.raw:
+    if not res.raw:
         return [("Iqdb 暂时无法使用", None)]
     # 如果遇到搜索结果相似度低的情况，去除第一个只有提示信息的空结果
     if res.raw[0].content == "No relevant matches":

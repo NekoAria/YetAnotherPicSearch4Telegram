@@ -13,7 +13,7 @@ async def ascii2d_search(
 ) -> List[Tuple[str, Union[str, bytes, None]]]:
     ascii2d_color = Ascii2D(client=client)
     color_res = await ascii2d_color.search(file=file)
-    if not color_res or not color_res.raw:
+    if not color_res.raw:
         return [("Ascii2D 暂时无法使用", None)]
     async with ClientSession() as session:
         resp = await session.get(
