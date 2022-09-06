@@ -26,6 +26,7 @@ bot = TelegramClient("bot", config.api_id, config.api_hash, proxy=proxy).start(
     bot_token=config.token
 )
 bot.parse_mode = "html"
+bot_name = ""
 allowed_users = [config.owner_id] + config.allowed_users
 search_mode_tips = "请选择搜图模式"
 search_buttons = [
@@ -60,10 +61,13 @@ async def start(event: events.NewMessage.Event) -> None:
     await event.reply("请发送图片，然后选择搜图模式")
 
 
-def is_mentioned_or_get_command(
+async def is_mentioned_or_get_command(
     event: Union[events.NewMessage.Event, events.Album.Event]
 ) -> bool:
-    if event.mentioned or "搜图" in event.text:
+    global bot_name
+    if not bot_name:
+        bot_name = (await bot.get_me()).username
+    if f"@{bot_name}" in event.text or "搜图" in event.text:
         return True
     return False
 
@@ -81,7 +85,9 @@ def is_photo_or_video(
 
 @bot.on(events.NewMessage(func=check_permission))  # type: ignore
 async def handle_photo_or_video_message(event: events.NewMessage.Event) -> None:
-    if (event.is_group or event.is_channel) and not is_mentioned_or_get_command(event):
+    if (event.is_group or event.is_channel) and not await is_mentioned_or_get_command(
+        event
+    ):
         return
     if event.grouped_id:
         return
@@ -99,7 +105,9 @@ async def handle_photo_or_video_message(event: events.NewMessage.Event) -> None:
 
 @bot.on(events.Album(func=check_permission))  # type: ignore
 async def handle_album_message(event: events.Album.Event) -> None:
-    if (event.is_group or event.is_channel) and not is_mentioned_or_get_command(event):
+    if (event.is_group or event.is_channel) and not await is_mentioned_or_get_command(
+        event
+    ):
         return
     await event.reply(search_mode_tips, buttons=search_buttons)
 
