@@ -9,10 +9,12 @@ from PicImageSearch import EHentai
 from PicImageSearch.model import EHentaiResponse
 
 from .config import config
-from .utils import get_hyperlink, get_image_bytes_by_url
+from .utils import DEFAULT_HEADERS, get_hyperlink, get_image_bytes_by_url
 
 EHENTAI_HEADERS = (
-    {"Cookie": config.exhentai_cookies} if config.exhentai_cookies else None
+    {"Cookie": config.exhentai_cookies, **DEFAULT_HEADERS}
+    if config.exhentai_cookies
+    else DEFAULT_HEADERS
 )
 
 

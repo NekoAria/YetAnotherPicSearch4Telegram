@@ -5,7 +5,7 @@ from PicImageSearch import Ascii2D
 from PicImageSearch.model import Ascii2DResponse
 
 from .config import config
-from .utils import get_hyperlink, get_image_bytes_by_url
+from .utils import DEFAULT_HEADERS, get_hyperlink, get_image_bytes_by_url
 
 
 async def ascii2d_search(
@@ -15,7 +15,7 @@ async def ascii2d_search(
     color_res = await ascii2d_color.search(file=file)
     if not color_res.raw:
         return [("Ascii2D 暂时无法使用", None)]
-    async with ClientSession() as session:
+    async with ClientSession(headers=DEFAULT_HEADERS) as session:
         resp = await session.get(
             color_res.url.replace("/color/", "/bovw/"), proxy=config.proxy
         )
