@@ -9,23 +9,16 @@ from telethon.events import CallbackQuery
 from telethon.tl.custom import Button
 from telethon.tl.patched import Message
 from tenacity import retry, stop_after_attempt, stop_after_delay
-from yarl import URL
 
-from .ascii2d import ascii2d_search
-from .config import config
-from .ehentai import ehentai_search
-from .iqdb import iqdb_search
-from .saucenao import saucenao_search
-from .utils import get_first_frame_from_video
-from .whatanime import whatanime_search
+from .. import bot
+from ..ascii2d import ascii2d_search
+from ..config import config
+from ..ehentai import ehentai_search
+from ..iqdb import iqdb_search
+from ..saucenao import saucenao_search
+from ..utils import get_first_frame_from_video
+from ..whatanime import whatanime_search
 
-proxy = (
-    ("http", URL(config.proxy).host, URL(config.proxy).port) if config.proxy else None
-)
-bot = TelegramClient("bot", config.api_id, config.api_hash, proxy=proxy).start(
-    bot_token=config.token
-)
-bot.parse_mode = "html"
 bot_name = ""
 allowed_users = [config.owner_id] + config.allowed_users
 search_mode_tips = "请选择搜图模式"
@@ -213,11 +206,3 @@ async def send_search_results(
         await _bot.send_file(send_to, file=file, caption=caption, reply_to=reply_to)
     else:
         await _bot.send_message(send_to, caption, reply_to=reply_to)
-
-
-def main() -> None:
-    if not config.saucenao_api_key:
-        logger.warning("请配置 saucenao_api_key")
-        return
-    logger.info("Bot started")
-    bot.run_until_disconnected()
