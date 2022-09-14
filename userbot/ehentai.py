@@ -106,7 +106,7 @@ async def search_result_filter(
     ]
     return [
         (
-            "\n".join([i for i in res_list if i != ""]),
+            "\n".join([i for i in res_list if i]),
             thumbnail,
         )
     ]

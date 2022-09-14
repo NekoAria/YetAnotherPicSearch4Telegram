@@ -37,7 +37,7 @@ async def iqdb_search(
     ]
     return [
         (
-            "\n".join([i for i in res_list if i != ""]),
+            "\n".join([i for i in res_list if i]),
             selected_res.thumbnail,
         )
     ]

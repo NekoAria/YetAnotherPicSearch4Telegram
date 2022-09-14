@@ -40,5 +40,5 @@ async def whatanime_search(
             f"Start: {start_date}",
             f"End: {end_date}" if end_date else "",
         ]
-        return [("\n".join([i for i in res_list if i != ""]), thumbnail)]
+        return [("\n".join([i for i in res_list if i]), thumbnail)]
     return [("WhatAnime 暂时无法使用", None)]

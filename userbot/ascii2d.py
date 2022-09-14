@@ -34,7 +34,7 @@ async def ascii2d_search(
             f"Source: {get_hyperlink(selected_res.url)}" if selected_res.url else "",
             f"Via: {get_hyperlink(res.url)}",
         ]
-        return [i for i in res_list if i != ""], thumbnail
+        return [i for i in res_list if i], thumbnail
 
     color_final_res, color_thumbnail = await get_final_res(color_res)
     bovw_final_res, bovw_thumbnail = await get_final_res(bovw_res)
