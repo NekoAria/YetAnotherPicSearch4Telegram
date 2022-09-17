@@ -7,6 +7,7 @@ import arrow
 from aiohttp import ClientSession
 from PicImageSearch import EHentai
 from PicImageSearch.model import EHentaiResponse
+from pyquery import PyQuery
 
 from .config import config
 from .utils import DEFAULT_HEADERS, get_hyperlink, get_image_bytes_by_url
@@ -82,9 +83,13 @@ async def search_result_filter(
         if priority[key] > 0 and len(res.raw) != len(group_list):
             res.raw = [i for i in res.raw if i not in group_list]
 
-    # 优先找汉化版或原版
+    # 优先找汉化版，并尝试过滤只有评分 1 星的结果；没找到就优先找原版
     if chinese_res := [
-        i for i in res.raw if all(tag in i.tags for tag in ["translated", "chinese"])
+        i
+        for i in res.raw
+        if "translated" in i.tags
+        and "chinese" in i.tags
+        and "-64px" not in PyQuery(i.origin)("div.ir").attr("style")
     ]:
         selected_res = chinese_res[0]
     elif not_translated_res := [i for i in res.raw if "translated" not in i.tags]:
