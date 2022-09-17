@@ -9,13 +9,13 @@ from yarl import URL
 from .ascii2d import ascii2d_search
 from .config import config
 from .ehentai import ehentai_title_search
-from .utils import get_hyperlink, get_image_bytes_by_url, get_source
+from .utils import get_hyperlink, get_source
 from .whatanime import whatanime_search
 
 
 async def saucenao_search(
     file: bytes, client: ClientSession, mode: str
-) -> List[Tuple[str, Union[str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
     saucenao_db = {
         "all": 999,
         "pixiv": 5,
@@ -36,7 +36,7 @@ async def saucenao_search(
             db=db,
         )
     res = await saucenao.search(file=file)
-    final_res: List[Tuple[str, Union[str, bytes, None]]] = []
+    final_res: List[Tuple[str, Union[List[str], str, bytes, None]]] = []
     if res and res.raw:
         selected_res = res.raw[0]
         ext_urls = selected_res.origin["data"].get("ext_urls")
@@ -60,7 +60,6 @@ async def saucenao_search(
             for i in ext_urls:
                 if "danbooru" in i:
                     selected_res.url = i
-        thumbnail = await get_image_bytes_by_url(selected_res.thumbnail)
         if not (source := selected_res.origin["data"].get("source", "")):
             source = await get_source(selected_res.url)
         if source:
@@ -89,7 +88,9 @@ async def saucenao_search(
         ]
         if res.long_remaining < 10:
             final_res.append((f"SauceNAO 24h 内仅剩 {res.long_remaining} 次使用次数", None))
-        final_res.append(("\n".join([i for i in res_list if i]), thumbnail))
+        final_res.append(
+            ("\n".join([i for i in res_list if i]), selected_res.thumbnail)
+        )
         if selected_res.similarity < config.saucenao_low_acc:
             # 因为 saucenao 的动画搜索数据库更新不够快，所以当搜索模式为动画时额外增加 whatanime 的搜索结果
             if mode == "anime":

@@ -4,12 +4,10 @@ from typing import Any, Dict, List, Tuple, Union
 from aiohttp import ClientSession
 from PicImageSearch import TraceMoe
 
-from .utils import get_image_bytes_by_url
-
 
 async def whatanime_search(
     file: bytes, client: ClientSession
-) -> List[Tuple[str, Union[str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
     whatanime = TraceMoe(client=client)
     res = await whatanime.search(file=file)
     if res and res.raw:
@@ -17,9 +15,7 @@ async def whatanime_search(
         minutes = math.floor(time / 60)
         seconds = math.floor(time % 60)
         time_str = f"{minutes:02d}:{seconds:02d}"
-        thumbnail = await get_image_bytes_by_url(
-            res.raw[0].cover_image,
-        )
+        thumbnail = res.raw[0].cover_image
         chinese_title = res.raw[0].title_chinese
         native_title = res.raw[0].title_native
 

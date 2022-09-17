@@ -9,7 +9,7 @@ from .utils import get_hyperlink, get_source
 
 async def iqdb_search(
     file: bytes, client: ClientSession
-) -> List[Tuple[str, Union[str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
     iqdb = Iqdb(client=client)
     res = await iqdb.search(file=file)
     if not res.raw:

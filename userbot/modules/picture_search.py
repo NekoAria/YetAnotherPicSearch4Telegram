@@ -138,7 +138,7 @@ async def handle_search(event: events.CallbackQuery) -> None:
 @retry(stop=(stop_after_attempt(3) | stop_after_delay(30)), reraise=True)
 async def get_search_results(
     msg: Message, peer_id: Any, event_data: bytes, client: ClientSession
-) -> List[Tuple[str, Union[str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
     if (document := msg.document) and document.mime_type == "video/mp4":
         if document.size > 10 * 1024 * 1024:
             await bot.send_message(peer_id, "跳过超过 10M 的视频", reply_to=msg)
@@ -173,7 +173,7 @@ async def get_messages_to_search(msg: Message) -> List[Message]:
 
 async def handle_search_mode(
     event_data: bytes, file: bytes, client: ClientSession
-) -> List[Tuple[str, Union[str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
     if event_data == b"Ascii2D":
         return await ascii2d_search(file, client)
     elif event_data == b"Iqdb":
@@ -200,7 +200,7 @@ async def send_search_results(
     send_to: int,
     caption: str,
     reply_to: Message,
-    file: Union[str, bytes, None] = None,
+    file: Union[List[str], str, bytes, None] = None,
 ) -> None:
     if file:
         await _bot.send_file(send_to, file=file, caption=caption, reply_to=reply_to)

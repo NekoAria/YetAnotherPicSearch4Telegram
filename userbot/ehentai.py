@@ -21,7 +21,7 @@ EHENTAI_HEADERS = (
 
 async def ehentai_search(
     file: bytes, client: ClientSession
-) -> List[Tuple[str, Union[str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
     ex = bool(config.exhentai_cookies)
     ehentai = EHentai(client=client)
     if res := await ehentai.search(file=file, ex=ex):
@@ -34,7 +34,9 @@ async def ehentai_search(
     return [("EHentai 暂时无法使用", None)]
 
 
-async def ehentai_title_search(title: str) -> List[Tuple[str, Union[str, bytes, None]]]:
+async def ehentai_title_search(
+    title: str,
+) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
     url = "https://exhentai.org" if config.exhentai_cookies else "https://e-hentai.org"
     params: Dict[str, Any] = {"f_search": title}
     async with ClientSession(headers=EHENTAI_HEADERS) as session:
@@ -65,7 +67,7 @@ async def ehentai_title_search(title: str) -> List[Tuple[str, Union[str, bytes, 
 
 async def search_result_filter(
     res: EHentaiResponse,
-) -> List[Tuple[str, Union[str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
     if not res.raw:
         _url = get_hyperlink(res.url)
         return [(f"EHentai 搜索结果为空\nVia: {_url}", None)]
