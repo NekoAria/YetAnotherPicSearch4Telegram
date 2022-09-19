@@ -15,7 +15,7 @@ from .whatanime import whatanime_search
 
 async def saucenao_search(
     file: bytes, client: ClientSession, mode: str
-) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
     saucenao_db = {
         "all": 999,
         "pixiv": 5,
@@ -36,7 +36,7 @@ async def saucenao_search(
             db=db,
         )
     res = await saucenao.search(file=file)
-    final_res: List[Tuple[str, Union[List[str], str, bytes, None]]] = []
+    final_res: List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]] = []
     if res and res.raw:
         selected_res = res.raw[0]
         ext_urls = selected_res.origin["data"].get("ext_urls")
@@ -95,7 +95,7 @@ async def saucenao_search(
             # 因为 saucenao 的动画搜索数据库更新不够快，所以当搜索模式为动画时额外增加 whatanime 的搜索结果
             if mode == "anime":
                 final_res.extend(await whatanime_search(file, client))
-            elif config.use_ascii2d_when_low_acc:
+            elif config.auto_use_ascii2d:
                 final_res.append(
                     (f"相似度 {selected_res.similarity}% 过低，自动使用 Ascii2D 进行搜索", None)
                 )

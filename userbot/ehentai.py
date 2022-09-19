@@ -9,6 +9,7 @@ from PicImageSearch import EHentai
 from PicImageSearch.model import EHentaiResponse
 from pyquery import PyQuery
 
+from .ascii2d import ascii2d_search
 from .config import config
 from .utils import DEFAULT_HEADERS, get_hyperlink, get_image_bytes_by_url
 
@@ -21,7 +22,7 @@ EHENTAI_HEADERS = (
 
 async def ehentai_search(
     file: bytes, client: ClientSession
-) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
     ex = bool(config.exhentai_cookies)
     ehentai = EHentai(client=client)
     if res := await ehentai.search(file=file, ex=ex):
@@ -30,13 +31,18 @@ async def ehentai_search(
             async with ClientSession(headers=EHENTAI_HEADERS) as session:
                 resp = await session.get(f"{res.url}&fs_exp=on", proxy=config.proxy)
                 res = EHentaiResponse(await resp.text(), str(resp.url))
-        return await search_result_filter(res)
+        final_res: List[
+            Tuple[str, Union[List[str], List[bytes], str, bytes, None]]
+        ] = await search_result_filter(res)
+        if not res.raw and config.auto_use_ascii2d:
+            final_res.extend(await ascii2d_search(file, client))
+        return final_res
     return [("EHentai 暂时无法使用", None)]
 
 
 async def ehentai_title_search(
     title: str,
-) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
     url = "https://exhentai.org" if config.exhentai_cookies else "https://e-hentai.org"
     params: Dict[str, Any] = {"f_search": title}
     async with ClientSession(headers=EHENTAI_HEADERS) as session:
@@ -67,7 +73,7 @@ async def ehentai_title_search(
 
 async def search_result_filter(
     res: EHentaiResponse,
-) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
     if not res.raw:
         _url = get_hyperlink(res.url)
         return [(f"EHentai 搜索结果为空\nVia: {_url}", None)]

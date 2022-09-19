@@ -7,7 +7,7 @@ from PicImageSearch import TraceMoe
 
 async def whatanime_search(
     file: bytes, client: ClientSession
-) -> List[Tuple[str, Union[List[str], str, bytes, None]]]:
+) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
     whatanime = TraceMoe(client=client)
     res = await whatanime.search(file=file)
     if res and res.raw:
