@@ -1,11 +1,12 @@
 import re
 from asyncio import sleep
-from typing import List, Tuple, Union
+from typing import Optional, Tuple
 
 from aiohttp import ClientSession
 from PicImageSearch import SauceNAO
 from yarl import URL
 
+from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE
 from .ascii2d import ascii2d_search
 from .config import config
 from .ehentai import ehentai_title_search
@@ -15,7 +16,7 @@ from .whatanime import whatanime_search
 
 async def saucenao_search(
     file: bytes, client: ClientSession, mode: str
-) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
+) -> Tuple[SEARCH_RESULT_TYPE, Optional[SEARCH_FUNCTION_TYPE]]:
     saucenao_db = {
         "all": 999,
         "pixiv": 5,
@@ -36,7 +37,7 @@ async def saucenao_search(
             db=db,
         )
     res = await saucenao.search(file=file)
-    final_res: List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]] = []
+    final_res: SEARCH_RESULT_TYPE = []
     if res and res.raw:
         selected_res = res.raw[0]
         ext_urls = selected_res.origin["data"].get("ext_urls")
@@ -94,16 +95,16 @@ async def saucenao_search(
         if selected_res.similarity < config.saucenao_low_acc:
             # 因为 saucenao 的动画搜索数据库更新不够快，所以当搜索模式为动画时额外增加 whatanime 的搜索结果
             if mode == "anime":
-                final_res.extend(await whatanime_search(file, client))
+                return final_res, whatanime_search
             elif config.auto_use_ascii2d:
                 final_res.append(
                     (f"相似度 {selected_res.similarity}% 过低，自动使用 Ascii2D 进行搜索", None)
                 )
-                final_res.extend(await ascii2d_search(file, client))
+                return final_res, ascii2d_search
         elif selected_res.index_id in saucenao_db["doujin"]:  # type: ignore
             final_res.extend(await ehentai_title_search(selected_res.title))
         elif selected_res.index_id in saucenao_db["anime"]:  # type: ignore
-            final_res.extend(await whatanime_search(file, client))
+            return final_res, whatanime_search
     elif (
         res
         and res.status == 429
@@ -113,5 +114,5 @@ async def saucenao_search(
         return await saucenao_search(file, client, mode)
     else:
         final_res.append(("SauceNAO 暂时无法使用，自动使用 Ascii2D 进行搜索", None))
-        final_res.extend(await ascii2d_search(file, client))
-    return final_res
+        return final_res, ascii2d_search
+    return final_res, None

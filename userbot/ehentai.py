@@ -1,7 +1,7 @@
 import itertools
 from collections import defaultdict
 from difflib import SequenceMatcher
-from typing import Any, Dict, List, Tuple, Union
+from typing import Any, Dict, Optional, Tuple
 
 import arrow
 from aiohttp import ClientSession
@@ -9,9 +9,10 @@ from PicImageSearch import EHentai
 from PicImageSearch.model import EHentaiResponse
 from pyquery import PyQuery
 
+from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE
 from .ascii2d import ascii2d_search
 from .config import config
-from .utils import DEFAULT_HEADERS, get_hyperlink, get_image_bytes_by_url
+from .utils import DEFAULT_HEADERS, get_bytes_by_url, get_hyperlink
 
 EHENTAI_HEADERS = (
     {"Cookie": config.exhentai_cookies, **DEFAULT_HEADERS}
@@ -22,7 +23,7 @@ EHENTAI_HEADERS = (
 
 async def ehentai_search(
     file: bytes, client: ClientSession
-) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
+) -> Tuple[SEARCH_RESULT_TYPE, Optional[SEARCH_FUNCTION_TYPE]]:
     ex = bool(config.exhentai_cookies)
     ehentai = EHentai(client=client)
     if res := await ehentai.search(file=file, ex=ex):
@@ -31,18 +32,16 @@ async def ehentai_search(
             async with ClientSession(headers=EHENTAI_HEADERS) as session:
                 resp = await session.get(f"{res.url}&fs_exp=on", proxy=config.proxy)
                 res = EHentaiResponse(await resp.text(), str(resp.url))
-        final_res: List[
-            Tuple[str, Union[List[str], List[bytes], str, bytes, None]]
-        ] = await search_result_filter(res)
+        final_res: SEARCH_RESULT_TYPE = await search_result_filter(res)
         if not res.raw and config.auto_use_ascii2d:
-            final_res.extend(await ascii2d_search(file, client))
-        return final_res
-    return [("EHentai 暂时无法使用", None)]
+            return final_res, ascii2d_search
+        return final_res, None
+    return [("EHentai 暂时无法使用", None)], None
 
 
 async def ehentai_title_search(
     title: str,
-) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
+) -> SEARCH_RESULT_TYPE:
     url = "https://exhentai.org" if config.exhentai_cookies else "https://e-hentai.org"
     params: Dict[str, Any] = {"f_search": title}
     async with ClientSession(headers=EHENTAI_HEADERS) as session:
@@ -73,7 +72,7 @@ async def ehentai_title_search(
 
 async def search_result_filter(
     res: EHentaiResponse,
-) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
+) -> SEARCH_RESULT_TYPE:
     if not res.raw:
         _url = get_hyperlink(res.url)
         return [(f"EHentai 搜索结果为空\nVia: {_url}", None)]
@@ -105,7 +104,7 @@ async def search_result_filter(
     else:
         selected_res = res.raw[0]
 
-    thumbnail = await get_image_bytes_by_url(
+    thumbnail = await get_bytes_by_url(
         selected_res.thumbnail, cookies=config.exhentai_cookies
     )
     date = arrow.get(selected_res.date).to("local").format("YYYY-MM-DD HH:mm")

@@ -1,16 +1,15 @@
-from typing import List, Tuple, Union
+from typing import List, Tuple
 
 from aiohttp import ClientSession
 from PicImageSearch import Ascii2D
 from PicImageSearch.model import Ascii2DResponse
 
+from . import SEARCH_RESULT_TYPE
 from .config import config
-from .utils import DEFAULT_HEADERS, get_hyperlink, get_image_bytes_by_url
+from .utils import DEFAULT_HEADERS, get_bytes_by_url, get_hyperlink
 
 
-async def ascii2d_search(
-    file: bytes, client: ClientSession
-) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
+async def ascii2d_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_TYPE:
     ascii2d_color = Ascii2D(client=client)
     color_res = await ascii2d_color.search(file=file)
     if not color_res.raw:
@@ -31,22 +30,24 @@ async def ascii2d_search(
         for r in res.raw:
             if len(final_res_list) == 3:
                 break
-            if not (r.title or r.url or r.url_list):
+            if not (r.title or r.url_list):
                 continue
-            if (thumbnail := await get_image_bytes_by_url(r.thumbnail)) is None:
+            if (thumbnail := await get_bytes_by_url(r.thumbnail)) is None:
                 continue
-            author = r.author
-            if author and r.author_url:
-                author = get_hyperlink(r.author_url, author)
-            source = None
-            if r.url:
-                source = f"Source: {get_hyperlink(r.url)}"
-            elif r.url_list:
+            if r.author and len(r.url_list) % 2 == 0:
+                source = "\n".join(
+                    [
+                        f"{get_hyperlink(*a)}  {get_hyperlink(*b)}"
+                        for a, b in [
+                            r.url_list[i : i + 2] for i in range(0, len(r.url_list), 2)
+                        ]
+                    ]
+                )
+            else:
                 source = "  ".join([get_hyperlink(*i) for i in r.url_list])
             res_list = [
                 r.detail,
-                r.title,
-                f"Author: {author}" if author else "",
+                r.title if r.title != r.url_list[0][1] else "",
                 source,
             ]
             final_res_list.append("\n".join([i for i in res_list if i]))

@@ -1,5 +1,5 @@
 from itertools import takewhile
-from typing import Any, List, Tuple, Union
+from typing import Any, List, Optional, Tuple, Union
 
 from aiohttp import ClientSession
 from loguru import logger
@@ -10,7 +10,7 @@ from telethon.tl.custom import Button
 from telethon.tl.patched import Message
 from tenacity import retry, stop_after_attempt, stop_after_delay
 
-from .. import bot
+from .. import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
 from ..ascii2d import ascii2d_search
 from ..config import config
 from ..ehentai import ehentai_search
@@ -87,7 +87,7 @@ async def handle_photo_or_video_message(event: events.NewMessage.Event) -> None:
     elif event.is_reply:
         reply_to_msg = await event.get_reply_message()
         await bot.send_message(
-            reply_to_msg.peer_id,
+            event.chat_id,
             search_mode_tips,
             buttons=search_buttons,
             reply_to=reply_to_msg,
@@ -106,13 +106,12 @@ async def handle_album_message(event: events.Album.Event) -> None:
 @bot.on(CallbackQuery(func=check_permission))  # type: ignore
 async def handle_search(event: events.CallbackQuery) -> None:
     reply_to_msg = await event.get_message()
-    peer_id = reply_to_msg.peer_id
     msgs = await get_messages_to_search(reply_to_msg)
     if not msgs:
-        await bot.send_message(peer_id, "没有获取到图片或视频", reply_to=reply_to_msg)
+        await bot.send_message(event.chat_id, "没有获取到图片或视频", reply_to=reply_to_msg)
         return
     if not event.is_private:
-        await bot.delete_messages(peer_id, message_ids=reply_to_msg.id)
+        await bot.delete_messages(event.chat_id, message_ids=reply_to_msg.id)
     network = (
         Network(proxies=config.proxy, cookies=config.exhentai_cookies, timeout=60)
         if event.data == b"EHentai"
@@ -120,27 +119,34 @@ async def handle_search(event: events.CallbackQuery) -> None:
     )
     async with network as client:
         for msg in msgs:
-            tips_msg = await bot.send_message(peer_id, "正在进行搜索，请稍候", reply_to=msg)
+            tips_msg = await bot.send_message(event.chat_id, "正在进行搜索，请稍候", reply_to=msg)
             try:
-                results = await get_search_results(msg, peer_id, event.data, client)
-                if not results:
-                    await bot.delete_messages(peer_id, message_ids=tips_msg.id)
-                for caption, file in results:
-                    await send_search_results(bot, peer_id, caption, msg, file=file)
+                file = await get_file_from_message(msg, event.chat_id)
+                if not file:
+                    continue
+                result, extra = await handle_search_mode(event.data, file, client)
+                for caption, _file in result:
+                    await send_search_results(
+                        bot, event.chat_id, caption, msg, file=_file
+                    )
+                if extra:
+                    for caption, _file in await extra(file, client):
+                        await send_search_results(
+                            bot, event.chat_id, caption, msg, file=_file
+                        )
             except Exception as e:
                 logger.exception(e)
-                await bot.send_message(peer_id, f"该图搜图失败\nE: {repr(e)}", reply_to=msg)
-            await bot.delete_messages(peer_id, message_ids=tips_msg.id)
+                await bot.send_message(
+                    event.chat_id, f"该图搜图失败\nE: {repr(e)}", reply_to=msg
+                )
+            await bot.delete_messages(event.chat_id, message_ids=tips_msg.id)
 
 
-@retry(stop=(stop_after_attempt(3) | stop_after_delay(30)), reraise=True)
-async def get_search_results(
-    msg: Message, peer_id: Any, event_data: bytes, client: ClientSession
-) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
+async def get_file_from_message(msg: Message, chat_id: Any) -> Optional[bytes]:
     if (document := msg.document) and document.mime_type == "video/mp4":
         if document.size > 10 * 1024 * 1024:
-            await bot.send_message(peer_id, "跳过超过 10M 的视频", reply_to=msg)
-            return []
+            await bot.send_message(chat_id, "跳过超过 10M 的视频", reply_to=msg)
+            return None
         file = await get_first_frame_from_video(
             await bot.download_media(document, file=bytes)
         )
@@ -149,9 +155,9 @@ async def get_search_results(
     else:
         file = await bot.download_media(msg.document, file=bytes)
     if not file:
-        await bot.send_message(peer_id, "图片或视频获取失败", reply_to=msg)
-        return []
-    return await handle_search_mode(event_data, file, client)
+        await bot.send_message(chat_id, "图片或视频获取失败", reply_to=msg)
+        return None
+    return file
 
 
 async def get_messages_to_search(msg: Message) -> List[Message]:
@@ -169,28 +175,33 @@ async def get_messages_to_search(msg: Message) -> List[Message]:
     return [i for i in msgs if is_photo_or_video(i)]
 
 
+@retry(stop=(stop_after_attempt(3) | stop_after_delay(30)), reraise=True)
 async def handle_search_mode(
     event_data: bytes, file: bytes, client: ClientSession
-) -> List[Tuple[str, Union[List[str], List[bytes], str, bytes, None]]]:
+) -> Tuple[SEARCH_RESULT_TYPE, Optional[SEARCH_FUNCTION_TYPE]]:
+    result_list = []
+    extra = None
+
     if event_data == b"Ascii2D":
-        return await ascii2d_search(file, client)
+        result_list = await ascii2d_search(file, client)
     elif event_data == b"Iqdb":
-        return await iqdb_search(file, client)
+        result_list, extra = await iqdb_search(file, client)
     elif event_data == b"WhatAnime":
-        return await whatanime_search(file, client)
+        result_list = await whatanime_search(file, client)
     elif event_data == b"EHentai":
-        return await ehentai_search(file, client)
+        result_list, extra = await ehentai_search(file, client)
     elif event_data == b"SauceNAO":
-        return await saucenao_search(file, client, "all")
+        result_list, extra = await saucenao_search(file, client, "all")
     elif event_data == b"Pixiv":
-        return await saucenao_search(file, client, "pixiv")
+        result_list, extra = await saucenao_search(file, client, "pixiv")
     elif event_data == b"Danbooru":
-        return await saucenao_search(file, client, "danbooru")
+        result_list, extra = await saucenao_search(file, client, "danbooru")
     elif event_data == b"Anime":
-        return await saucenao_search(file, client, "anime")
+        result_list, extra = await saucenao_search(file, client, "anime")
     elif event_data == b"Doujin":
-        return await saucenao_search(file, client, "doujin")
-    return []
+        result_list, extra = await saucenao_search(file, client, "doujin")
+
+    return result_list, extra
 
 
 async def send_search_results(

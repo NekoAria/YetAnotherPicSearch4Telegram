@@ -11,15 +11,24 @@ DEFAULT_HEADERS = {
 }
 
 
-async def get_image_bytes_by_url(
-    url: str, cookies: Optional[str] = None
-) -> Optional[bytes]:
+async def get_bytes_by_url(url: str, cookies: Optional[str] = None) -> Optional[bytes]:
     headers = {"Cookie": cookies, **DEFAULT_HEADERS} if cookies else DEFAULT_HEADERS
     async with ClientSession(headers=headers) as session:
         async with session.get(url, proxy=config.proxy) as resp:
             if resp.status == 200 and (image_bytes := await resp.read()):
                 return image_bytes
     return None
+
+
+def handle_source(source: str) -> str:
+    return (
+        source.replace("www.pixiv.net/en/artworks", "www.pixiv.net/artworks")
+        .replace(
+            "www.pixiv.net/member_illust.php?mode=medium&illust_id=",
+            "www.pixiv.net/artworks/",
+        )
+        .replace("http://", "https://")
+    )
 
 
 async def get_source(url: str) -> str:
@@ -37,7 +46,7 @@ async def get_source(url: str) -> str:
                 if resp.status == 200:
                     html = await resp.text()
                     source = PyQuery(html)("#post_source").attr("value")
-    return source
+    return handle_source(source)
 
 
 def get_hyperlink(href: str, text: Optional[str] = None) -> str:
@@ -76,4 +85,4 @@ async def get_first_frame_from_video(video: bytes) -> Optional[bytes]:
         )
         d = PyQuery(await resp.text())
         first_frame_img_url = "https:" + d("img:nth-child(1)").attr("src")
-        return await get_image_bytes_by_url(first_frame_img_url)
+        return await get_bytes_by_url(first_frame_img_url)
