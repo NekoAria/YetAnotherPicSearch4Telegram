@@ -27,6 +27,8 @@ async def ehentai_search(
     ex = bool(config.exhentai_cookies)
     ehentai = EHentai(client=client)
     if res := await ehentai.search(file=file, ex=ex):
+        if "Please wait a bit longer between each file search" in res.origin:
+            return [("EHentai 触发搜图频率限制", None)], None
         if not res.raw:
             # 如果第一次没找到，使搜索结果包含被删除的部分，并重新搜索
             async with ClientSession(headers=EHENTAI_HEADERS) as session:
@@ -34,6 +36,7 @@ async def ehentai_search(
                 res = EHentaiResponse(await resp.text(), str(resp.url))
         final_res: SEARCH_RESULT_TYPE = await search_result_filter(res)
         if not res.raw and config.auto_use_ascii2d:
+            final_res.append(("自动使用 Ascii2D 进行搜索", None))
             return final_res, ascii2d_search
         return final_res, None
     return [("EHentai 暂时无法使用", None)], None
@@ -52,6 +55,7 @@ async def ehentai_title_search(
                 params["advsearch"] = 1
                 params["f_sname"] = "on"
                 params["f_stags"] = "on"
+                params["f_sdesc"] = "on"
                 params["f_sh"] = "on"
                 resp = await session.get(url, proxy=config.proxy, params=params)
                 res = EHentaiResponse(await resp.text(), str(resp.url))
@@ -90,16 +94,21 @@ async def search_result_filter(
         if priority[key] > 0 and len(res.raw) != len(group_list):
             res.raw = [i for i in res.raw if i not in group_list]
 
+    # 过滤那些无主题的杂图图集
+    if not_themeless_res := [i for i in res.raw if "themeless" not in " ".join(i.tags)]:
+        res.raw = not_themeless_res
     # 优先找汉化版，并尝试过滤只有评分 1 星的结果；没找到就优先找原版
     if chinese_res := [
         i
         for i in res.raw
-        if "translated" in i.tags
-        and "chinese" in i.tags
-        and "-64px" not in PyQuery(i.origin)("div.ir").attr("style")
+        if "translated" in " ".join(i.tags)
+        and "chinese" in " ".join(i.tags)
+        and ("-64px" not in PyQuery(i.origin)("div.ir").attr("style"))
     ]:
         selected_res = chinese_res[0]
-    elif not_translated_res := [i for i in res.raw if "translated" not in i.tags]:
+    elif not_translated_res := [
+        i for i in res.raw if "translated" not in " ".join(i.tags)
+    ]:
         selected_res = not_translated_res[0]
     else:
         selected_res = res.raw[0]
