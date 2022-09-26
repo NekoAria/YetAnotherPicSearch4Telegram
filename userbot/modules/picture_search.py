@@ -1,11 +1,14 @@
 from itertools import takewhile
-from typing import Any, List, Optional, Tuple, Union
+from typing import List, Optional, Tuple, Union
 
 from aiohttp import ClientSession
+from cachetools import TTLCache
+from cachetools.keys import hashkey
 from loguru import logger
 from PicImageSearch import Network
 from telethon import TelegramClient, events
 from telethon.events import CallbackQuery
+from telethon.hints import EntityLike
 from telethon.tl.custom import Button
 from telethon.tl.patched import Message
 from tenacity import retry, stop_after_attempt, stop_after_delay
@@ -16,7 +19,7 @@ from ..config import config
 from ..ehentai import ehentai_search
 from ..iqdb import iqdb_search
 from ..saucenao import saucenao_search
-from ..utils import get_first_frame_from_video
+from ..utils import async_cached, get_first_frame_from_video
 from ..whatanime import whatanime_search
 
 bot_name = ""
@@ -142,7 +145,8 @@ async def handle_search(event: events.CallbackQuery) -> None:
             await bot.delete_messages(event.chat_id, message_ids=tips_msg.id)
 
 
-async def get_file_from_message(msg: Message, chat_id: Any) -> Optional[bytes]:
+@async_cached(cache=TTLCache(maxsize=16, ttl=180), key=lambda msg, chat_id: hashkey(msg.id, chat_id))  # type: ignore
+async def get_file_from_message(msg: Message, chat_id: EntityLike) -> Optional[bytes]:
     if (document := msg.document) and document.mime_type == "video/mp4":
         if document.size > 10 * 1024 * 1024:
             await bot.send_message(chat_id, "跳过超过 10M 的视频", reply_to=msg)
@@ -176,6 +180,7 @@ async def get_messages_to_search(msg: Message) -> List[Message]:
 
 
 @retry(stop=(stop_after_attempt(3) | stop_after_delay(30)), reraise=True)
+@async_cached(cache=TTLCache(maxsize=16, ttl=180))  # type: ignore
 async def handle_search_mode(
     event_data: bytes, file: bytes, client: ClientSession
 ) -> Tuple[SEARCH_RESULT_TYPE, Optional[SEARCH_FUNCTION_TYPE]]:

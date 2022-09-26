@@ -3,6 +3,7 @@ from functools import update_wrapper
 from typing import Optional
 
 from aiohttp import ClientSession
+from cachetools.keys import hashkey
 from pyquery import PyQuery
 from yarl import URL
 
@@ -93,3 +94,30 @@ async def get_first_frame_from_video(video: bytes) -> Optional[bytes]:
         d = PyQuery(await resp.text())
         first_frame_img_url = "https:" + d("img:nth-child(1)").attr("src")
         return await get_bytes_by_url(first_frame_img_url)
+
+
+def async_cached(cache, key=hashkey):  # type: ignore
+    """
+    https://github.com/tkem/cachetools/commit/3f073633ed4f36f05b57838a3e5655e14d3e3524
+    """
+
+    def decorator(func):  # type: ignore
+        if cache is None:
+
+            async def wrapper(*args, **kwargs):  # type: ignore
+                return await func(*args, **kwargs)
+
+        else:
+
+            async def wrapper(*args, **kwargs):  # type: ignore
+                k = key(*args, **kwargs)
+                with suppress(KeyError):  # key not found
+                    return cache[k]
+                v = await func(*args, **kwargs)
+                with suppress(ValueError):  # value too large
+                    cache[k] = v
+                return v
+
+        return update_wrapper(wrapper, func)
+
+    return decorator

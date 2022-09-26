@@ -1,5 +1,6 @@
 aiohttp[speedups]~=3.8.1
 arrow~=1.2.3
+cachetools~=5.2.0
 loguru~=0.6.0
 PicImageSearch~=3.6.1
 pydantic[dotenv]~=1.10.2
