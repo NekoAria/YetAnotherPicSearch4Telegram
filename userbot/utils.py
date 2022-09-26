@@ -1,3 +1,5 @@
+from contextlib import suppress
+from functools import update_wrapper
 from typing import Optional
 
 from aiohttp import ClientSession
@@ -32,31 +34,36 @@ def handle_source(source: str) -> str:
 
 
 async def get_source(url: str) -> str:
-    source = ""
     async with ClientSession(headers=DEFAULT_HEADERS) as session:
         if URL(url).host in ["danbooru.donmai.us", "gelbooru.com"]:
             async with session.get(url, proxy=config.proxy) as resp:
                 if resp.status == 200:
                     html = await resp.text()
-                    source = PyQuery(html)(".image-container").attr(
+                    url = PyQuery(html)(".image-container").attr(
                         "data-normalized-source"
                     )
         elif URL(url).host in ["yande.re", "konachan.com"]:
             async with session.get(url, proxy=config.proxy) as resp:
                 if resp.status == 200:
                     html = await resp.text()
-                    source = PyQuery(html)("#post_source").attr("value")
-    return handle_source(source)
+                    url = PyQuery(html)("#post_source").attr("value")
+    return handle_source(url)
+
+
+def get_website_mark(href: str) -> str:
+    host = URL(href).host
+    if not host:
+        return href
+    if "danbooru" in host:
+        return "danbooru"
+    host_split = host.split(".")
+    return host_split[1] if len(host_split) >= 3 else host_split[0]
 
 
 def get_hyperlink(href: str, text: Optional[str] = None) -> str:
-    if not text and (host := URL(href).host):
-        if "danbooru" in host:
-            text = "danbooru"
-        else:
-            host_split = host.split(".")
-            text = host_split[1] if len(host_split) >= 3 else host_split[0]
-    return f"<a href={href}>{text}</a>"
+    if not text:
+        text = get_website_mark(href)
+    return href if text == href else f"<a href={href}>{text}</a>"
 
 
 async def get_first_frame_from_video(video: bytes) -> Optional[bytes]:
