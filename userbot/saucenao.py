@@ -10,7 +10,7 @@ from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE
 from .ascii2d import ascii2d_search
 from .config import config
 from .ehentai import ehentai_title_search
-from .utils import get_hyperlink, get_source
+from .utils import get_bytes_by_url, get_hyperlink, get_source
 from .whatanime import whatanime_search
 
 
@@ -77,21 +77,19 @@ async def saucenao_search(
         author = selected_res.author
         if author and selected_res.index_id == saucenao_db["pixiv"]:
             author = get_hyperlink(
-                author,
                 f'https://www.pixiv.net/users/{selected_res.origin["data"]["member_id"]}',
+                author,
             )
         res_list = [
             f"SauceNAO ({selected_res.similarity}%)",
             selected_res.title,
             f"Author: {author}" if author else "",
-            selected_res.url,
             source,
         ]
         if res.long_remaining < 10:
             final_res.append((f"SauceNAO 24h 内仅剩 {res.long_remaining} 次使用次数", None))
-        final_res.append(
-            ("\n".join([i for i in res_list if i]), selected_res.thumbnail)
-        )
+        thumbnail = await get_bytes_by_url(selected_res.thumbnail)
+        final_res.append(("\n".join([i for i in res_list if i]), thumbnail))
         if selected_res.similarity < config.saucenao_low_acc:
             # 因为 saucenao 的动画搜索数据库更新不够快，所以当搜索模式为动画时额外增加 whatanime 的搜索结果
             if mode == "anime":
