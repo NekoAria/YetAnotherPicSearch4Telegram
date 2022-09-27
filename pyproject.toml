@@ -21,7 +21,7 @@ loguru = "^0.6.0"
 PicImageSearch = "^3.6.1"
 pydantic = {extras = ["dotenv"], version = "^1.10.2"}
 pyquery = "^1.4.3"
-Telethon = "1.25.2"
+Telethon = "^1.25.2"
 tenacity = "^8.1.0"
 yarl = "^1.8.1"
 
