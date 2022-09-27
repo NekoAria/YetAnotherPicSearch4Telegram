@@ -14,15 +14,15 @@ keywords = ["telegram", "bot", "saucenao", "pixiv", "danbooru", "doujin", "anime
 
 [tool.poetry.dependencies]
 python = "^3.8"
-aiohttp = {extras = ["speedups"], version = "^3.8.1"}
+aiohttp = {extras = ["speedups"], version = "^3.8.3"}
 arrow = "^1.2.3"
 cachetools = "^5.2.0"
 loguru = "^0.6.0"
 PicImageSearch = "^3.6.1"
 pydantic = {extras = ["dotenv"], version = "^1.10.2"}
 pyquery = "^1.4.3"
-Telethon = "1.24.0"
-tenacity = "^8.0.1"
+Telethon = "1.25.2"
+tenacity = "^8.1.0"
 yarl = "^1.8.1"
 
 [tool.poetry.dev-dependencies]
