@@ -1,3 +1,4 @@
+from asyncio import TimeoutError
 from itertools import takewhile
 from typing import List, Optional, Tuple, Union
 
@@ -85,16 +86,30 @@ async def handle_photo_or_video_message(event: events.NewMessage.Event) -> None:
         return
     if event.grouped_id:
         return
-    if is_photo_or_video(event):
-        await event.reply(search_mode_tips, buttons=search_buttons)
-    elif event.is_reply:
-        reply_to_msg = await event.get_reply_message()
-        await bot.send_message(
-            event.chat_id,
-            search_mode_tips,
-            buttons=search_buttons,
-            reply_to=reply_to_msg,
-        )
+    if is_photo_or_video(event) or event.is_reply:
+        if event.is_reply:
+            reply_to_msg = await event.get_reply_message()
+        else:
+            reply_to_msg = event
+        async with bot.conversation(
+            event.chat_id, timeout=180, exclusive=False
+        ) as conv:
+            msg = await conv.send_message(
+                search_mode_tips,
+                buttons=search_buttons,
+                reply_to=reply_to_msg,
+            )
+            while True:
+                try:
+                    await conv.wait_event(
+                        events.CallbackQuery(
+                            func=lambda e: e.sender_id == event.sender_id
+                        )
+                    )
+                except TimeoutError:
+                    break
+        if not event.is_private:
+            await bot.delete_messages(event.chat_id, message_ids=msg.id)
 
 
 @bot.on(events.Album(func=check_permission))  # type: ignore
@@ -113,8 +128,6 @@ async def handle_search(event: events.CallbackQuery) -> None:
     if not msgs:
         await bot.send_message(event.chat_id, "没有获取到图片或视频", reply_to=reply_to_msg)
         return
-    if not event.is_private:
-        await bot.delete_messages(event.chat_id, message_ids=reply_to_msg.id)
     network = (
         Network(proxies=config.proxy, cookies=config.exhentai_cookies, timeout=60)
         if event.data == b"EHentai"
@@ -124,18 +137,18 @@ async def handle_search(event: events.CallbackQuery) -> None:
         for msg in msgs:
             tips_msg = await bot.send_message(event.chat_id, "正在进行搜索，请稍候", reply_to=msg)
             try:
-                file = await get_file_from_message(msg, event.chat_id)
-                if not file:
+                _file = await get_file_from_message(msg, event.chat_id)
+                if not _file:
                     continue
-                result, extra = await handle_search_mode(event.data, file, client)
-                for caption, _file in result:
+                result, extra = await handle_search_mode(event.data, _file, client)
+                for caption, __file in result:
                     await send_search_results(
-                        bot, event.chat_id, caption, msg, file=_file
+                        bot, event.chat_id, caption, msg, file=__file
                     )
                 if extra:
-                    for caption, _file in await extra(file, client):
+                    for caption, __file in await extra(_file, client):
                         await send_search_results(
-                            bot, event.chat_id, caption, msg, file=_file
+                            bot, event.chat_id, caption, msg, file=__file
                         )
             except Exception as e:
                 logger.exception(e)
@@ -151,17 +164,17 @@ async def get_file_from_message(msg: Message, chat_id: EntityLike) -> Optional[b
         if document.size > 10 * 1024 * 1024:
             await bot.send_message(chat_id, "跳过超过 10M 的视频", reply_to=msg)
             return None
-        file = await get_first_frame_from_video(
+        _file = await get_first_frame_from_video(
             await bot.download_media(document, file=bytes)
         )
     elif msg.photo:
-        file = await bot.download_media(msg.photo, file=bytes)
+        _file = await bot.download_media(msg.photo, file=bytes)
     else:
-        file = await bot.download_media(msg.document, file=bytes)
-    if not file:
+        _file = await bot.download_media(msg.document, file=bytes)
+    if not _file:
         await bot.send_message(chat_id, "图片或视频获取失败", reply_to=msg)
         return None
-    return file
+    return _file
 
 
 async def get_messages_to_search(msg: Message) -> List[Message]:
