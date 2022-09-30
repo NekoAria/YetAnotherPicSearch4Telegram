@@ -80,9 +80,9 @@ async def get_first_frame_from_video(video: bytes) -> Optional[bytes]:
         )
         d = PyQuery(await resp.text())
         next_url = d("form").attr("action")
-        file = d("form > input[type=hidden]").attr("value")
+        _file = d("form > input[type=hidden]").attr("value")
         data = {
-            "file": file,
+            "file": _file,
             "start": "0",
             "end": "1",
             "size": "original",

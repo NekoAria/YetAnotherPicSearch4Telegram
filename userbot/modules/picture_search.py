@@ -1,4 +1,5 @@
 from asyncio import TimeoutError
+from functools import reduce
 from itertools import takewhile
 from typing import List, Optional, Tuple, Union
 
@@ -78,52 +79,59 @@ def is_photo_or_video(
     return False
 
 
+async def wait_callback(
+    event: Union[events.NewMessage.Event, events.Album.Event], reply_to_msg: Message
+) -> None:
+    async with bot.conversation(event.chat_id, timeout=180, exclusive=False) as conv:
+        msg = await conv.send_message(
+            search_mode_tips,
+            buttons=search_buttons,
+            reply_to=reply_to_msg,
+        )
+        while True:
+            try:
+                await conv.wait_event(
+                    events.CallbackQuery(func=lambda e: e.sender_id == event.sender_id)
+                )
+            except TimeoutError:
+                break
+    if not event.is_private:
+        await msg.delete()
+
+
 @bot.on(events.NewMessage(func=check_permission))  # type: ignore
-async def handle_photo_or_video_message(event: events.NewMessage.Event) -> None:
-    if (event.is_group or event.is_channel) and not await is_mentioned_or_get_command(
-        event
-    ):
-        return
-    if event.grouped_id:
-        return
-    if is_photo_or_video(event) or event.is_reply:
-        if event.is_reply:
-            reply_to_msg = await event.get_reply_message()
-        else:
-            reply_to_msg = event
-        async with bot.conversation(
-            event.chat_id, timeout=180, exclusive=False
-        ) as conv:
-            msg = await conv.send_message(
-                search_mode_tips,
-                buttons=search_buttons,
-                reply_to=reply_to_msg,
-            )
-            while True:
-                try:
-                    await conv.wait_event(
-                        events.CallbackQuery(
-                            func=lambda e: e.sender_id == event.sender_id
-                        )
-                    )
-                except TimeoutError:
-                    break
-        if not event.is_private:
-            await bot.delete_messages(event.chat_id, message_ids=msg.id)
-
-
 @bot.on(events.Album(func=check_permission))  # type: ignore
-async def handle_album_message(event: events.Album.Event) -> None:
+async def handle_message_event(
+    event: Union[events.NewMessage.Event, events.Album.Event]
+) -> None:
     if (event.is_group or event.is_channel) and not await is_mentioned_or_get_command(
         event
     ):
         return
-    await event.reply(search_mode_tips, buttons=search_buttons)
+    if (
+        isinstance(event, events.NewMessage.Event)
+        and is_photo_or_video(event)
+        or event.is_reply
+    ):
+        reply_to_msg = (
+            await event.get_reply_message() if event.is_reply else event.message
+        )
+        await wait_callback(event, reply_to_msg)
+    elif isinstance(event, events.Album.Event):
+        await wait_callback(event, event.messages)
 
 
 @bot.on(CallbackQuery(func=check_permission))  # type: ignore
-async def handle_search(event: events.CallbackQuery) -> None:
+async def handle_search(event: events.CallbackQuery.Event) -> None:
     reply_to_msg = await event.get_message()
+    buttons = [
+        i
+        for i in reduce(lambda x, y: x + y, reply_to_msg.buttons)
+        if i.data != event.data
+    ]
+    await reply_to_msg.edit(
+        buttons=[buttons[i : i + 2] for i in range(0, len(buttons), 2)]
+    )
     msgs = await get_messages_to_search(reply_to_msg)
     if not msgs:
         await bot.send_message(event.chat_id, "没有获取到图片或视频", reply_to=reply_to_msg)
@@ -155,7 +163,7 @@ async def handle_search(event: events.CallbackQuery) -> None:
                 await bot.send_message(
                     event.chat_id, f"该图搜图失败\nE: {repr(e)}", reply_to=msg
                 )
-            await bot.delete_messages(event.chat_id, message_ids=tips_msg.id)
+            await tips_msg.delete()
 
 
 @async_cached(cache=TTLCache(maxsize=16, ttl=180), key=lambda msg, chat_id: hashkey(msg.id, chat_id))  # type: ignore
