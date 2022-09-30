@@ -121,15 +121,15 @@ async def handle_message_event(
         return
     if (
         isinstance(event, events.NewMessage.Event)
-        and is_photo_or_video(event)
-        or event.is_reply
+        and not event.grouped_id
+        and (is_photo_or_video(event) or event.is_reply)
     ):
         reply_to_msg = (
             await event.get_reply_message() if event.is_reply else event.message
         )
         await wait_callback(event, reply_to_msg)
     elif isinstance(event, events.Album.Event):
-        await wait_callback(event, event.messages)
+        await wait_callback(event, event.messages[0])
 
 
 @bot.on(CallbackQuery(func=check_permission))  # type: ignore
