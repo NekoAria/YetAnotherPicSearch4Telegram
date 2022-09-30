@@ -82,20 +82,31 @@ def is_photo_or_video(
 async def wait_callback(
     event: Union[events.NewMessage.Event, events.Album.Event], reply_to_msg: Message
 ) -> None:
-    async with bot.conversation(event.chat_id, timeout=180, exclusive=False) as conv:
-        msg = await conv.send_message(
+    if event.is_private:
+        await bot.send_message(
+            event.chat_id,
             search_mode_tips,
             buttons=search_buttons,
             reply_to=reply_to_msg,
         )
-        while True:
-            try:
-                await conv.wait_event(
-                    events.CallbackQuery(func=lambda e: e.sender_id == event.sender_id)
-                )
-            except TimeoutError:
-                break
-    if not event.is_private:
+    else:
+        async with bot.conversation(
+            event.chat_id, timeout=180, exclusive=False
+        ) as conv:
+            msg = await conv.send_message(
+                search_mode_tips,
+                buttons=search_buttons,
+                reply_to=reply_to_msg,
+            )
+            while True:
+                try:
+                    await conv.wait_event(
+                        events.CallbackQuery(
+                            func=lambda e: e.sender_id == event.sender_id
+                        )
+                    )
+                except TimeoutError:
+                    break
         await msg.delete()
 
 
