@@ -9,6 +9,7 @@ from cachetools.keys import hashkey
 from loguru import logger
 from PicImageSearch import Network
 from telethon import TelegramClient, events
+from telethon.errors import MessageNotModifiedError
 from telethon.events import CallbackQuery
 from telethon.hints import EntityLike
 from telethon.tl.custom import Button
@@ -100,11 +101,12 @@ async def wait_callback(
             )
             while True:
                 try:
-                    await conv.wait_event(
+                    response = await conv.wait_event(
                         events.CallbackQuery(
                             func=lambda e: e.sender_id == event.sender_id
                         )
                     )
+                    await handle_search(response)
                 except TimeoutError:
                     break
         await msg.delete()
@@ -132,7 +134,7 @@ async def handle_message_event(
         await wait_callback(event, event.messages[0])
 
 
-@bot.on(CallbackQuery(func=check_permission))  # type: ignore
+@bot.on(CallbackQuery(func=lambda e: e.is_private))  # type: ignore
 async def handle_search(event: events.CallbackQuery.Event) -> None:
     reply_to_msg = await event.get_message()
     buttons = [
@@ -140,9 +142,13 @@ async def handle_search(event: events.CallbackQuery.Event) -> None:
         for i in reduce(lambda x, y: x + y, reply_to_msg.buttons)
         if i.data != event.data
     ]
-    await reply_to_msg.edit(
-        buttons=[buttons[i : i + 2] for i in range(0, len(buttons), 2)]
-    )
+    # 奇怪的 BUG ：有时候会间隔 N 秒连续触发同一个按钮的点击事件
+    try:
+        await reply_to_msg.edit(
+            buttons=[buttons[i : i + 2] for i in range(0, len(buttons), 2)]
+        )
+    except MessageNotModifiedError:
+        return
     msgs = await get_messages_to_search(reply_to_msg)
     if not msgs:
         await bot.send_message(event.chat_id, "没有获取到图片或视频", reply_to=reply_to_msg)
