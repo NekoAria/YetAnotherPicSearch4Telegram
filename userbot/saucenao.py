@@ -6,7 +6,7 @@ from aiohttp import ClientSession
 from PicImageSearch import SauceNAO
 from yarl import URL
 
-from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE
+from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
 from .ascii2d import ascii2d_search
 from .config import config
 from .ehentai import ehentai_title_search
@@ -88,7 +88,10 @@ async def saucenao_search(
         ]
         if res.long_remaining < 10:
             final_res.append((f"SauceNAO 24h 内仅剩 {res.long_remaining} 次使用次数", None))
-        thumbnail = await get_bytes_by_url(selected_res.thumbnail)
+        thumbnail = await bot.upload_file(
+            await get_bytes_by_url(selected_res.thumbnail),
+            file_name=URL(selected_res.thumbnail).path.split("/")[-1],
+        )
         final_res.append(("\n".join([i for i in res_list if i]), thumbnail))
         if selected_res.similarity < config.saucenao_low_acc:
             # 因为 saucenao 的动画搜索数据库更新不够快，所以当搜索模式为动画时额外增加 whatanime 的搜索结果
