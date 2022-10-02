@@ -89,8 +89,7 @@ async def saucenao_search(
         if res.long_remaining < 10:
             final_res.append((f"SauceNAO 24h 内仅剩 {res.long_remaining} 次使用次数", None))
         thumbnail = await bot.upload_file(
-            await get_bytes_by_url(selected_res.thumbnail),
-            file_name=URL(selected_res.thumbnail).path.split("/")[-1],
+            await get_bytes_by_url(selected_res.thumbnail), file_name="image.jpg"
         )
         final_res.append(("\n".join([i for i in res_list if i]), thumbnail))
         if selected_res.similarity < config.saucenao_low_acc:

@@ -3,7 +3,6 @@ from typing import Any, Dict
 
 from aiohttp import ClientSession
 from PicImageSearch import TraceMoe
-from yarl import URL
 
 from . import SEARCH_RESULT_TYPE, bot
 from .utils import get_bytes_by_url
@@ -20,8 +19,7 @@ async def whatanime_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_
         thumbnail = await get_bytes_by_url(res.raw[0].cover_image)
         video_url = res.raw[0].video
         video = await bot.upload_file(
-            await get_bytes_by_url(video_url),
-            file_name=URL(video_url).path.split("/")[-1],
+            await get_bytes_by_url(video_url), file_name="video.mp4"
         )
         chinese_title = res.raw[0].title_chinese
         native_title = res.raw[0].title_native
