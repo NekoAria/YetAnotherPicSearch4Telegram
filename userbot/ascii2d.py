@@ -3,6 +3,7 @@ from typing import List, Tuple
 from aiohttp import ClientSession
 from PicImageSearch import Ascii2D
 from PicImageSearch.model import Ascii2DResponse
+from yarl import URL
 
 from . import SEARCH_RESULT_TYPE
 from .config import config
@@ -35,20 +36,27 @@ async def ascii2d_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_TY
             if (thumbnail := await get_bytes_by_url(r.thumbnail)) is None:
                 continue
             source = ""
-            if r.author and len(r.url_list) % 2 == 0:
-                source = "\n".join(
-                    [
-                        f"[{get_website_mark(b[0])}] {get_hyperlink(*a)} - {get_hyperlink(*b)}"
-                        for a, b in [
-                            r.url_list[i : i + 2] for i in range(0, len(r.url_list), 2)
+            title = r.title
+            if r.url_list:
+                if title == r.url_list[0][1]:
+                    title = ""
+                if r.author and len(r.url_list) % 2 == 0:
+                    source = "\n".join(
+                        [
+                            f"[{get_website_mark(b[0])}] {get_hyperlink(*a)} - {get_hyperlink(*b)}"
+                            for a, b in [
+                                r.url_list[i : i + 2]
+                                for i in range(0, len(r.url_list), 2)
+                            ]
                         ]
-                    ]
-                )
-            elif r.url_list:
-                source = "  ".join([get_hyperlink(*i) for i in r.url_list])
+                    )
+                else:
+                    source = "  ".join([get_hyperlink(*i) for i in r.url_list])
+            if title and URL(title).host:
+                title = get_hyperlink(title)
             res_list = [
                 r.detail,
-                r.title if r.url_list and r.title != r.url_list[0][1] else "",
+                title,
                 source,
             ]
             final_res_list.append("\n".join([i for i in res_list if i]))
