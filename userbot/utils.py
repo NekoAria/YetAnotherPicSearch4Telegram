@@ -63,6 +63,8 @@ def get_website_mark(href: str) -> str:
         return href
     if "danbooru" in host:
         return "danbooru"
+    elif "seiga" in host:
+        return "seiga"
     host_split = host.split(".")
     return host_split[1] if len(host_split) >= 3 else host_split[0]
 
