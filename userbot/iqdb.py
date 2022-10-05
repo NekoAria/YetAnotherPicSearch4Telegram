@@ -40,6 +40,7 @@ async def iqdb_search(
         f"Iqdb ({selected_res.similarity}%)",
         get_hyperlink(selected_res.url),
         source,
+        f"Via: {get_hyperlink(res.url)}",
     ]
     final_res.append(
         (

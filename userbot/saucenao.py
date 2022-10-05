@@ -75,6 +75,7 @@ async def saucenao_search(
             selected_res.title,
             f"Author: {author}" if author else "",
             f"Source: {source}" if source else "",
+            f"Via: {get_hyperlink(res.url)}",
         ]
         if res.long_remaining < 10:
             final_res.append((f"SauceNAO 24h 内仅剩 {res.long_remaining} 次使用次数", None))
