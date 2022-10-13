@@ -40,7 +40,10 @@ async def ascii2d_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_TY
             if r.url_list:
                 if title == r.url_list[0][1]:
                     title = ""
-                if r.author and len(r.url_list) % 2 == 0:
+                if r.author:
+                    extra = r.url_list[-1] if len(r.url_list) % 2 == 1 else None
+                    if extra:
+                        r.url_list.pop()
                     source = "\n".join(
                         [
                             f"[{get_website_mark(b[0])}] {get_hyperlink(*a)} - {get_hyperlink(*b)}"
@@ -50,6 +53,8 @@ async def ascii2d_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_TY
                             ]
                         ]
                     )
+                    if extra:
+                        source += f"\n{get_hyperlink(*extra)}"
                 else:
                     source = "  ".join([get_hyperlink(*i) for i in r.url_list])
             if title and URL(title).host:

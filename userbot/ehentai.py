@@ -75,8 +75,8 @@ async def ehentai_title_search(
 async def search_result_filter(
     res: EHentaiResponse,
 ) -> SEARCH_RESULT_TYPE:
+    _url = get_hyperlink(res.url)
     if not res.raw:
-        _url = get_hyperlink(res.url)
         return [(f"EHentai 搜索结果为空\nVia: {_url}", None)]
     # 尽可能过滤掉非预期结果(大概
     priority = defaultdict(lambda: 0)
@@ -124,7 +124,7 @@ async def search_result_filter(
         f"Type: {selected_res.type}",
         f"Date: {date}",
         f"Source: {get_hyperlink(selected_res.url)}",
-        f"Via: {get_hyperlink(res.url)}",
+        f"Via: {_url}",
     ]
     return [
         (
