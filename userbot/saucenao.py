@@ -7,7 +7,6 @@ from PicImageSearch import SauceNAO
 from yarl import URL
 
 from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
-from .ascii2d import ascii2d_search
 from .config import config
 from .ehentai import ehentai_title_search
 from .utils import get_bytes_by_url, get_hyperlink, get_source
@@ -83,19 +82,10 @@ async def saucenao_search(
             await get_bytes_by_url(selected_res.thumbnail), file_name="image.jpg"
         )
         final_res.append(("\n".join([i for i in res_list if i]), thumbnail))
-        if selected_res.similarity < config.saucenao_low_acc:
-            # 因为 saucenao 的动画搜索数据库更新不够快，所以当搜索模式为动画时额外增加 whatanime 的搜索结果
-            if mode == "anime":
-                return final_res, whatanime_search
-            elif config.auto_use_ascii2d:
-                final_res.append(
-                    (f"相似度 {selected_res.similarity}% 过低，自动使用 Ascii2D 进行搜索", None)
-                )
-                return final_res, ascii2d_search
+        if selected_res.index_id in saucenao_db["anime"]:  # type: ignore
+            return final_res, whatanime_search
         elif selected_res.index_id in saucenao_db["doujin"]:  # type: ignore
             final_res.extend(await ehentai_title_search(selected_res.title))
-        elif selected_res.index_id in saucenao_db["anime"]:  # type: ignore
-            return final_res, whatanime_search
     elif (
         res
         and res.status == 429
@@ -104,6 +94,5 @@ async def saucenao_search(
         await sleep(30 / 4)
         return await saucenao_search(file, client, mode)
     else:
-        final_res.append(("SauceNAO 暂时无法使用，自动使用 Ascii2D 进行搜索", None))
-        return final_res, ascii2d_search
+        final_res.append(("SauceNAO 暂时无法使用", None))
     return final_res, None

@@ -11,7 +11,6 @@ from PicImageSearch.model import EHentaiResponse
 from pyquery import PyQuery
 
 from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE
-from .ascii2d import ascii2d_search
 from .config import config
 from .utils import DEFAULT_HEADERS, get_bytes_by_url, get_hyperlink
 
@@ -36,10 +35,7 @@ async def ehentai_search(
             async with ClientSession(headers=EHENTAI_HEADERS) as session:
                 resp = await session.get(f"{res.url}&fs_exp=on", proxy=config.proxy)
                 res = EHentaiResponse(await resp.text(), str(resp.url))
-        final_res: SEARCH_RESULT_TYPE = await search_result_filter(res)
-        if not res.raw and config.auto_use_ascii2d:
-            final_res.append(("自动使用 Ascii2D 进行搜索", None))
-            return final_res, ascii2d_search
+        final_res = await search_result_filter(res)
         return final_res, None
     return [("EHentai 暂时无法使用", None)], None
 
