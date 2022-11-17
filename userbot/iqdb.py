@@ -4,10 +4,10 @@ from aiohttp import ClientSession
 from PicImageSearch import Iqdb
 from yarl import URL
 
-from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE
+from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
 from .ascii2d import ascii2d_search
 from .config import config
-from .utils import get_hyperlink, get_source
+from .utils import get_bytes_by_url, get_hyperlink, get_source
 
 
 async def iqdb_search(
@@ -42,10 +42,13 @@ async def iqdb_search(
         source,
         f"Via: {get_hyperlink(res.url)}",
     ]
+    thumbnail = await bot.upload_file(
+        await get_bytes_by_url(selected_res.thumbnail), file_name="image.jpg"
+    )
     final_res.append(
         (
             "\n".join([i for i in res_list if i]),
-            selected_res.thumbnail,
+            thumbnail,
         )
     )
 
