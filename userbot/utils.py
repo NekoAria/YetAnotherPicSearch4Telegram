@@ -35,26 +35,25 @@ def handle_source(source: str) -> str:
 
 
 async def get_source(url: str) -> str:
-    source = ""
-    async with ClientSession(headers=DEFAULT_HEADERS) as session:
-        if URL(url).host in ["danbooru.donmai.us", "gelbooru.com"]:
-            async with session.get(url, proxy=config.proxy) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    source = PyQuery(html)(".image-container").attr(
-                        "data-normalized-source"
-                    )
-        elif URL(url).host in ["yande.re", "konachan.com"]:
-            async with session.get(url, proxy=config.proxy) as resp:
-                if resp.status == 200:
-                    html = await resp.text()
-                    source = PyQuery(html)("#post_source").attr("value")
-                if not source:
-                    source = PyQuery(html)('a[href^="/pool/show/"]').text()
-    if source and URL(source).host:
-        return handle_source(source)
-    else:
-        return source or ""
+    source = url
+    if host := URL(url).host:
+        async with ClientSession(headers=DEFAULT_HEADERS) as session:
+            if host in ["danbooru.donmai.us", "gelbooru.com"]:
+                async with session.get(url, proxy=config.proxy) as resp:
+                    if resp.status == 200:
+                        html = await resp.text()
+                        source = PyQuery(html)(".image-container").attr(
+                            "data-normalized-source"
+                        )
+            elif host in ["yande.re", "konachan.com"]:
+                async with session.get(url, proxy=config.proxy) as resp:
+                    if resp.status == 200:
+                        html = await resp.text()
+                        source = PyQuery(html)("#post_source").attr("value")
+                    if not source:
+                        source = PyQuery(html)('a[href^="/pool/show/"]').text()
+
+    return handle_source(source) if (source and URL(source).host) else (source or "")
 
 
 def get_website_mark(href: str) -> str:
