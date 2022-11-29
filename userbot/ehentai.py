@@ -43,7 +43,7 @@ async def ehentai_search(
 async def ehentai_title_search(
     title: str,
 ) -> SEARCH_RESULT_TYPE:
-    title = title.replace(" ::: ", " ")
+    title = title.replace(" ::: ", " ").replace("[中国翻訳]", "")
     url = "https://exhentai.org" if config.exhentai_cookies else "https://e-hentai.org"
     params: Dict[str, Any] = {"f_search": title}
     async with ClientSession(headers=EHENTAI_HEADERS) as session:

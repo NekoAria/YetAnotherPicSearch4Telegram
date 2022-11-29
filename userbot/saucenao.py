@@ -85,7 +85,8 @@ async def saucenao_search(
         if selected_res.index_id in saucenao_db["anime"]:  # type: ignore
             return final_res, whatanime_search
         elif selected_res.index_id in saucenao_db["doujin"]:  # type: ignore
-            final_res.extend(await ehentai_title_search(selected_res.title))
+            title = selected_res.title.replace("-", "")
+            final_res.extend(await ehentai_title_search(title))
     elif (
         res
         and res.status == 429
