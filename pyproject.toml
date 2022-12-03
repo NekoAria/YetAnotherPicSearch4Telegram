@@ -23,7 +23,7 @@ pydantic = {extras = ["dotenv"], version = "^1.10.2"}
 pyquery = "^1.4.3"
 Telethon = "^1.26.0"
 tenacity = "^8.1.0"
-yarl = "^1.8.1"
+yarl = "^1.8.2"
 
 [tool.poetry.dev-dependencies]
 
