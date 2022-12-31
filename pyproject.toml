@@ -20,7 +20,7 @@ cachetools = "^5.2.0"
 loguru = "^0.6.0"
 PicImageSearch = "^3.7.4"
 pydantic = {extras = ["dotenv"], version = "^1.10.4"}
-pyquery = "^1.4.3"
+pyquery = "^2.0.0"
 Telethon = "^1.26.1"
 tenacity = "^8.1.0"
 yarl = "^1.8.2"
