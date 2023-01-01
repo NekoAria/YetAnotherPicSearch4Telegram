@@ -18,7 +18,7 @@ aiohttp = {extras = ["speedups"], version = "^3.8.3"}
 arrow = "^1.2.3"
 cachetools = "^5.2.0"
 loguru = "^0.6.0"
-PicImageSearch = "^3.7.4"
+PicImageSearch = "^3.7.5"
 pydantic = {extras = ["dotenv"], version = "^1.10.4"}
 pyquery = "^2.0.0"
 Telethon = "^1.26.1"
