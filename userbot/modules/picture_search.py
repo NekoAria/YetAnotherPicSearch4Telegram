@@ -9,7 +9,7 @@ from cachetools.keys import hashkey
 from loguru import logger
 from PicImageSearch import Network
 from telethon import TelegramClient, events
-from telethon.errors import MessageNotModifiedError
+from telethon.errors import MediaCaptionTooLongError, MessageNotModifiedError
 from telethon.events import CallbackQuery
 from telethon.hints import EntityLike
 from telethon.tl.custom import Button
@@ -255,6 +255,12 @@ async def send_search_results(
     file: Union[List[str], List[bytes], str, bytes, None] = None,
 ) -> None:
     if file:
-        await _bot.send_file(send_to, file=file, caption=caption, reply_to=reply_to)
+        try:
+            await _bot.send_file(send_to, file=file, caption=caption, reply_to=reply_to)
+        except MediaCaptionTooLongError:
+            await _bot.send_message(
+                send_to, caption, reply_to=reply_to, link_preview=False
+            )
+            await _bot.send_file(send_to, file=file, reply_to=reply_to)
     else:
         await _bot.send_message(send_to, caption, reply_to=reply_to)
