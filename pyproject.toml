@@ -16,7 +16,7 @@ keywords = ["telegram", "bot", "saucenao", "pixiv", "danbooru", "doujin", "anime
 python = "^3.8"
 aiohttp = {extras = ["speedups"], version = "^3.8.3"}
 arrow = "^1.2.3"
-cachetools = "^5.2.0"
+cachetools = "^5.2.1"
 loguru = "^0.6.0"
 PicImageSearch = "^3.7.8"
 pydantic = {extras = ["dotenv"], version = "^1.10.4"}
