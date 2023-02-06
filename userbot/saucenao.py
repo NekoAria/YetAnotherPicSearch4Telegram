@@ -22,6 +22,7 @@ async def saucenao_search(
         "danbooru": 9,
         "anime": [21, 22],
         "doujin": [18, 38],
+        "fakku": 16,
     }
     if isinstance(db := saucenao_db[mode], list):
         saucenao = SauceNAO(
@@ -87,6 +88,13 @@ async def saucenao_search(
         elif selected_res.index_id in saucenao_db["doujin"]:  # type: ignore
             title = selected_res.title.replace("-", "")
             final_res.extend(await ehentai_title_search(title))
+        # 如果搜索结果为 fakku ，额外返回 ehentai 的搜索结果
+        elif selected_res.index_id == saucenao_db["fakku"]:
+            final_res.extend(
+                await ehentai_title_search(
+                    f"{selected_res.author} {selected_res.title}"
+                )
+            )
     elif (
         res
         and res.status == 429
