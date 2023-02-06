@@ -38,9 +38,10 @@ async def iqdb_search(
         source,
         f"Via: {get_hyperlink(res.url)}",
     ]
-    thumbnail = await bot.upload_file(
-        await get_bytes_by_url(selected_res.thumbnail), file_name="image.jpg"
-    )
+    if _thumbnail := await get_bytes_by_url(selected_res.thumbnail):
+        thumbnail = await bot.upload_file(_thumbnail, file_name="image.jpg")
+    else:
+        thumbnail = None
     final_res.append(
         (
             "\n".join([i for i in res_list if i]),
