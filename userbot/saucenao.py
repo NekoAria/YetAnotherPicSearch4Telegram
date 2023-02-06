@@ -67,6 +67,7 @@ async def saucenao_search(
             source = await get_source(selected_res.url)
         if source and URL(source).host:
             source = get_hyperlink(source)
+        _url = get_hyperlink(selected_res.url)
         author = selected_res.author
         if author and selected_res.author_url:
             author = get_hyperlink(selected_res.author_url, author)
@@ -74,6 +75,7 @@ async def saucenao_search(
             f"SauceNAO ({selected_res.similarity}%)",
             selected_res.title,
             f"Author: {author}" if author else "",
+            _url if _url != source else "",
             f"Source: {source}" if source else "",
             f"Via: {get_hyperlink(res.url)}",
         ]
