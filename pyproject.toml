@@ -22,7 +22,7 @@ PicImageSearch = "^3.7.8"
 pydantic = {extras = ["dotenv"], version = "^1.10.4"}
 pyquery = "^2.0.0"
 Telethon = "^1.27.0"
-tenacity = "^8.1.0"
+tenacity = "^8.2.1"
 yarl = "^1.8.2"
 
 [tool.poetry.dev-dependencies]
