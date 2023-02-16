@@ -136,23 +136,25 @@ async def handle_message_event(
 
 @bot.on(CallbackQuery(func=lambda e: e.is_private))  # type: ignore
 async def handle_search(event: events.CallbackQuery.Event) -> None:
-    reply_to_msg = await event.get_message()
+    reply_to_msg: Message = await event.get_message()
     buttons = [
         i
         for i in reduce(lambda x, y: x + y, reply_to_msg.buttons)
         if i.data != event.data
     ]
+    buttons = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
     # 奇怪的 BUG ：有时候会间隔 N 秒连续触发同一个按钮的点击事件
     try:
-        await reply_to_msg.edit(
-            buttons=[buttons[i : i + 2] for i in range(0, len(buttons), 2)]
-        )
+        await reply_to_msg.edit(text="正在进行搜索，请稍候", buttons=None)
     except MessageNotModifiedError:
         return
-    msgs = await get_messages_to_search(reply_to_msg)
-    if not msgs:
-        await bot.send_message(event.chat_id, "没有获取到图片或视频", reply_to=reply_to_msg)
-        return
+    if is_photo_or_video(reply_to_msg):
+        msgs = [reply_to_msg]
+    else:
+        msgs = await get_messages_to_search(reply_to_msg)
+        if not msgs:
+            await bot.send_message(event.chat_id, "没有获取到图片或视频", reply_to=reply_to_msg)
+            return
     network = (
         Network(proxies=config.proxy, cookies=config.exhentai_cookies, timeout=60)
         if event.data == b"EHentai"
@@ -160,7 +162,6 @@ async def handle_search(event: events.CallbackQuery.Event) -> None:
     )
     async with network as client:
         for msg in msgs:
-            tips_msg = await bot.send_message(event.chat_id, "正在进行搜索，请稍候", reply_to=msg)
             try:
                 _file = await get_file_from_message(msg, event.chat_id)
                 if not _file:
@@ -168,19 +169,31 @@ async def handle_search(event: events.CallbackQuery.Event) -> None:
                 result, extra = await handle_search_mode(event.data, _file, client)
                 for caption, __file in result:
                     await send_search_results(
-                        bot, event.chat_id, caption, msg, file=__file
+                        bot,
+                        event.chat_id,
+                        caption,
+                        msg,
+                        file=__file,
+                        extra_file=_file,
+                        buttons=buttons,
                     )
                 if extra:
                     for caption, __file in await extra(_file, client):
                         await send_search_results(
-                            bot, event.chat_id, caption, msg, file=__file
+                            bot,
+                            event.chat_id,
+                            caption,
+                            msg,
+                            file=__file,
+                            extra_file=_file,
+                            buttons=buttons,
                         )
             except Exception as e:
                 logger.exception(e)
                 await bot.send_message(
                     event.chat_id, f"该图搜图失败\nE: {repr(e)}", reply_to=msg
                 )
-            await tips_msg.delete()
+    await reply_to_msg.edit(text=search_mode_tips, buttons=buttons)
 
 
 @async_cached(cache=TTLCache(maxsize=16, ttl=180), key=lambda msg, chat_id: hashkey(msg.id, chat_id))  # type: ignore
@@ -253,6 +266,8 @@ async def send_search_results(
     caption: str,
     reply_to: Message,
     file: Union[List[str], List[bytes], str, bytes, None] = None,
+    extra_file: Union[str, bytes, None] = None,
+    buttons: Optional[List[List[Button]]] = None,
 ) -> None:
     if file:
         try:
@@ -263,4 +278,17 @@ async def send_search_results(
             )
             await _bot.send_file(send_to, file=file, reply_to=reply_to)
     else:
-        await _bot.send_message(send_to, caption, reply_to=reply_to)
+        if "使用次数" in caption:
+            buttons = None
+        if extra_file:
+            await _bot.send_file(
+                send_to,
+                file=extra_file,
+                caption=caption,
+                reply_to=reply_to,
+                buttons=buttons,
+            )
+        else:
+            await _bot.send_message(
+                send_to, caption, reply_to=reply_to, link_preview=False
+            )
