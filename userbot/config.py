@@ -4,7 +4,6 @@ from pydantic import BaseSettings
 
 
 class Config(BaseSettings):
-
     # telegram bot token
     token: str = ""
     # telegram bot 拥有者 id
