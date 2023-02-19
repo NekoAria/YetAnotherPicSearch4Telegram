@@ -269,6 +269,9 @@ async def send_search_results(
     extra_file: Union[str, bytes, None] = None,
     buttons: Optional[List[List[Button]]] = None,
 ) -> None:
+    if send_to != config.owner_id and "已收藏" in caption:
+        caption = caption.replace("❤️ 已收藏\n", "")
+
     if file:
         try:
             await _bot.send_file(send_to, file=file, caption=caption, reply_to=reply_to)
