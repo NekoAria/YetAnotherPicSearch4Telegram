@@ -167,6 +167,9 @@ async def handle_search(event: events.CallbackQuery.Event) -> None:
                 if not _file:
                     continue
                 result, extra = await handle_search_mode(event.data, _file, client)
+                # 如果媒体文件为视频，就不往回发了
+                if (document := msg.document) and document.mime_type == "video/mp4":
+                    _file = None
                 for caption, __file in result:
                     await send_search_results(
                         bot,
