@@ -124,9 +124,11 @@ async def search_result_filter(
         selected_res.thumbnail, cookies=config.exhentai_cookies
     )
     date = arrow.get(selected_res.date).to("local").format("YYYY-MM-DD HH:mm")
+    favorited = bool(selected_res.origin.find("[id^='posted']").eq(0).attr("style"))
     res_list = [
         "EHentai 搜索结果",
         selected_res.title,
+        "❤️ 已收藏" if favorited else "",
         f"Type: {selected_res.type}",
         f"Date: {date}",
         f"Source: {get_hyperlink(selected_res.url)}",
