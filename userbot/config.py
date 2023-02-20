@@ -18,8 +18,6 @@ class Config(BaseSettings):
     api_id: int = 1025907  # get it from https://core.telegram.org/api/obtaining_api_id
     # telegram api hash
     api_hash: str = "452b0359b988148995f22ff0f4229750"  # get it from https://core.telegram.org/api/obtaining_api_hash
-    # saucenao 相似度低于这个百分比将被认定为相似度过低
-    saucenao_low_acc: int = 60
     # saucenao APIKEY，必填，否则无法使用 saucenao 搜图
     saucenao_api_key: str = ""
     # exhentai cookies，选填，没有的情况下自动改用 e-hentai 搜图
