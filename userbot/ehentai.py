@@ -27,10 +27,12 @@ async def ehentai_search(
 ) -> Tuple[SEARCH_RESULT_TYPE, Optional[SEARCH_FUNCTION_TYPE]]:
     ex = bool(config.exhentai_cookies)
     ehentai = EHentai(client=client)
+
     if res := await ehentai.search(file=file, ex=ex):
         if "Please wait a bit longer between each file search" in res.origin:
             await sleep(30 / 4)
             return await ehentai_search(file, client)
+
         if not res.raw:
             # 如果第一次没找到，使搜索结果包含被删除的部分，并重新搜索
             async with ClientSession(headers=EHENTAI_HEADERS) as session:
@@ -38,6 +40,7 @@ async def ehentai_search(
                 res = EHentaiResponse(await resp.text(), str(resp.url))
         final_res = await search_result_filter(res)
         return final_res, None
+
     return [("EHentai 暂时无法使用", None)], None
 
 
@@ -47,6 +50,7 @@ async def ehentai_title_search(
     title = re.sub(r"●|~| ::: |[中国翻訳]", " ", title).strip()
     url = "https://exhentai.org" if config.exhentai_cookies else "https://e-hentai.org"
     params: Dict[str, Any] = {"f_search": title}
+
     async with ClientSession(headers=EHENTAI_HEADERS) as session:
         resp = await session.get(url, proxy=config.proxy, params=params)
         if res := EHentaiResponse(await resp.text(), str(resp.url)):
@@ -57,6 +61,7 @@ async def ehentai_title_search(
                 params["f_sh"] = "on"
                 resp = await session.get(url, proxy=config.proxy, params=params)
                 res = EHentaiResponse(await resp.text(), str(resp.url))
+
             # 只保留标题和搜索关键词相关度较高的结果，并排序，以此来提高准确度
             if res.raw:
                 raw_with_ratio = [
@@ -69,6 +74,7 @@ async def ehentai_title_search(
                 else:
                     res.raw = [i[0] for i in raw_with_ratio]
             return await search_result_filter(res)
+
         return [("EHentai 暂时无法使用", None)]
 
 
@@ -78,14 +84,17 @@ async def search_result_filter(
     _url = get_hyperlink(res.url)
     if not res.raw:
         return [(f"EHentai 搜索结果为空\nVia: {_url}", None)]
+
     # 尝试过滤已删除的
     if not_expunged_res := [
         i for i in res.raw if not PyQuery(i.origin)("[id^='posted'] s")
     ]:
         res.raw = not_expunged_res
+
     # 尝试过滤无主题的杂图图集
     if not_themeless_res := [i for i in res.raw if "themeless" not in " ".join(i.tags)]:
         res.raw = not_themeless_res
+
     # 尝试过滤评分只有 1 星的
     if not_1_star_res := [
         i for i in res.raw if ("-64px" not in PyQuery(i.origin)("div.ir").attr("style"))
@@ -102,9 +111,10 @@ async def search_result_filter(
     priority["Asian Porn"] = 6
     res.raw.sort(key=lambda x: priority[x.type], reverse=True)
     for key, group in itertools.groupby(res.raw, key=lambda x: x.type):  # type: ignore
-        group_list = list(group)
-        if priority[key] > 0 and len(res.raw) != len(group_list):
-            res.raw = [i for i in res.raw if i not in group_list]
+        if priority[key] > 0:
+            group_list = list(group)
+            if len(res.raw) != len(group_list):
+                res.raw = [i for i in res.raw if i not in group_list]
 
     # 优先找汉化版；没找到就优先找原版
     if chinese_res := [

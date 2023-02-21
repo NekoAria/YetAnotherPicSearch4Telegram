@@ -13,8 +13,10 @@ logger.info("Bot started!")
 if not config.saucenao_api_key:
     logger.warning("Missing `saucenao_api_key` !")
     sys.exit(1)
+
 for module in ALL_MODULES:
     import_module(f"userbot.modules.{module}")
     logger.info(f"Module: [{module}] loaded!")
+
 logger.info("Bot inited!")
 bot.run_until_disconnected()

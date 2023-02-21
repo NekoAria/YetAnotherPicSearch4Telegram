@@ -15,11 +15,13 @@ async def iqdb_search(
     res = await iqdb.search(file=file)
     if not res.raw:
         return [("Iqdb 暂时无法使用", None)], None
+
     final_res: SEARCH_RESULT_TYPE = []
     # 如果遇到搜索结果相似度低的情况，去除第一个只有提示信息的空结果
     if res.raw[0].content == "No relevant matches":
         res.raw.pop(0)
     selected_res = res.raw[0]
+
     # 优先取 danbooru 或 yande.re
     danbooru_res_list = [i for i in res.raw if i.source == "Danbooru"]
     yandere_res_list = [i for i in res.raw if i.source == "yande.re"]
@@ -27,6 +29,7 @@ async def iqdb_search(
         selected_res = danbooru_res_list[0]
     elif yandere_res_list:
         selected_res = yandere_res_list[0]
+
     source = await get_source(selected_res.url)
     if source:
         if URL(source).host:

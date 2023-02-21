@@ -18,7 +18,7 @@ async def get_bytes_by_url(url: str, cookies: Optional[str] = None) -> Optional[
     headers = {"Cookie": cookies, **DEFAULT_HEADERS} if cookies else DEFAULT_HEADERS
     async with ClientSession(headers=headers) as session:
         async with session.get(url, proxy=config.proxy) as resp:
-            if resp.status == 200 and (image_bytes := await resp.read()):
+            if resp.status < 400 and (image_bytes := await resp.read()):
                 return image_bytes
     return None
 
@@ -36,22 +36,22 @@ def handle_source(source: str) -> str:
 
 async def get_source(url: str) -> str:
     source = url
-    if host := URL(url).host:
+    if host := URL(source).host:
         async with ClientSession(
             headers=None if host == "danbooru.donmai.us" else DEFAULT_HEADERS
         ) as session:
-            if host in ["danbooru.donmai.us", "gelbooru.com"]:
-                async with session.get(url, proxy=config.proxy) as resp:
-                    if resp.status == 200:
-                        html = await resp.text()
-                        source = PyQuery(html)(".image-container").attr(
-                            "data-normalized-source"
-                        )
-            elif host in ["yande.re", "konachan.com"]:
-                async with session.get(url, proxy=config.proxy) as resp:
-                    if resp.status == 200:
-                        html = await resp.text()
-                        source = PyQuery(html)("#post_source").attr("value")
+            async with session.get(source, proxy=config.proxy) as resp:
+                if resp.status >= 400:
+                    return ""
+
+                html = await resp.text()
+                if host in ["danbooru.donmai.us", "gelbooru.com"]:
+                    source = PyQuery(html)(".image-container").attr(
+                        "data-normalized-source"
+                    )
+
+                elif host in ["yande.re", "konachan.com"]:
+                    source = PyQuery(html)("#post_source").attr("value")
                     if not source:
                         source = PyQuery(html)('a[href^="/pool/show/"]').text()
 
