@@ -3,7 +3,7 @@ import re
 from asyncio import sleep
 from collections import defaultdict
 from difflib import SequenceMatcher
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict
 
 import arrow
 from aiohttp import ClientSession
@@ -11,7 +11,7 @@ from PicImageSearch import EHentai
 from PicImageSearch.model import EHentaiResponse
 from pyquery import PyQuery
 
-from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE
+from . import SEARCH_RESULT_TYPE
 from .config import config
 from .utils import DEFAULT_HEADERS, get_bytes_by_url, get_hyperlink
 
@@ -22,9 +22,7 @@ EHENTAI_HEADERS = (
 )
 
 
-async def ehentai_search(
-    file: bytes, client: ClientSession
-) -> Tuple[SEARCH_RESULT_TYPE, Optional[SEARCH_FUNCTION_TYPE]]:
+async def ehentai_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_TYPE:
     ex = bool(config.exhentai_cookies)
     ehentai = EHentai(client=client)
 
@@ -38,10 +36,9 @@ async def ehentai_search(
             async with ClientSession(headers=EHENTAI_HEADERS) as session:
                 resp = await session.get(f"{res.url}&fs_exp=on", proxy=config.proxy)
                 res = EHentaiResponse(await resp.text(), str(resp.url))
-        final_res = await search_result_filter(res)
-        return final_res, None
+        return await search_result_filter(res)
 
-    return [("EHentai 暂时无法使用", None)], None
+    return [("EHentai 暂时无法使用", None)]
 
 
 async def ehentai_title_search(

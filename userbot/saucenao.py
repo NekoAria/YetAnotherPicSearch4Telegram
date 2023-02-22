@@ -1,13 +1,12 @@
 import re
 from asyncio import sleep
-from typing import Optional, Tuple
 
 from aiohttp import ClientSession
 from PicImageSearch import SauceNAO
 from PicImageSearch.model import SauceNAOItem, SauceNAOResponse
 from yarl import URL
 
-from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
+from . import SEARCH_RESULT_TYPE, bot
 from .config import config
 from .ehentai import ehentai_title_search
 from .utils import get_bytes_by_url, get_hyperlink, get_source
@@ -25,7 +24,7 @@ SAUCENAO_DB = {
 
 async def saucenao_search(
     file: bytes, client: ClientSession, mode: str
-) -> Tuple[SEARCH_RESULT_TYPE, Optional[SEARCH_FUNCTION_TYPE]]:
+) -> SEARCH_RESULT_TYPE:
     db = SAUCENAO_DB[mode]
     if isinstance(db, list):
         saucenao = SauceNAO(
@@ -50,10 +49,10 @@ async def saucenao_search(
         return await saucenao_search(file, client, mode)
 
     if not res or not res.raw:
-        return [("SauceNAO 暂时无法使用", None)], None
+        return [("SauceNAO 暂时无法使用", None)]
 
     selected_res = get_best_result(res, res.raw[0])
-    return await get_final_res(res, selected_res)
+    return await get_final_res(file, client, res, selected_res)
 
 
 def get_best_pixiv_result(
@@ -88,9 +87,11 @@ def get_best_result(res: SauceNAOResponse, selected_res: SauceNAOItem) -> SauceN
 
 
 async def get_final_res(
+    file: bytes,
+    client: ClientSession,
     res: SauceNAOResponse,
     selected_res: SauceNAOItem,
-) -> Tuple[SEARCH_RESULT_TYPE, Optional[SEARCH_FUNCTION_TYPE]]:
+) -> SEARCH_RESULT_TYPE:
     source = selected_res.source if selected_res.source != selected_res.title else ""
     if not source and selected_res.url:
         source = await get_source(selected_res.url)
@@ -125,7 +126,7 @@ async def get_final_res(
     final_res.append(("\n".join([i for i in res_list if i]), thumbnail))
 
     if selected_res.index_id in SAUCENAO_DB["anime"]:  # type: ignore
-        return final_res, whatanime_search
+        final_res.extend(await whatanime_search(file, client))
     elif selected_res.index_id in SAUCENAO_DB["doujin"]:  # type: ignore
         title = selected_res.title.replace("-", "")
         final_res.extend(await ehentai_title_search(title))
@@ -135,4 +136,4 @@ async def get_final_res(
             await ehentai_title_search(f"{selected_res.author} {selected_res.title}")
         )
 
-    return final_res, None
+    return final_res

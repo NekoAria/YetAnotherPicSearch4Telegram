@@ -1,20 +1,16 @@
-from typing import Optional, Tuple
-
 from aiohttp import ClientSession
 from PicImageSearch import Iqdb
 from yarl import URL
 
-from . import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
+from . import SEARCH_RESULT_TYPE, bot
 from .utils import get_bytes_by_url, get_hyperlink, get_source
 
 
-async def iqdb_search(
-    file: bytes, client: ClientSession
-) -> Tuple[SEARCH_RESULT_TYPE, Optional[SEARCH_FUNCTION_TYPE]]:
+async def iqdb_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_TYPE:
     iqdb = Iqdb(client=client)
     res = await iqdb.search(file=file)
     if not res.raw:
-        return [("Iqdb 暂时无法使用", None)], None
+        return [("Iqdb 暂时无法使用", None)]
 
     final_res: SEARCH_RESULT_TYPE = []
     # 如果遇到搜索结果相似度低的情况，去除第一个只有提示信息的空结果
@@ -52,4 +48,4 @@ async def iqdb_search(
         )
     )
 
-    return final_res, None
+    return final_res

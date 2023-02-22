@@ -1,7 +1,7 @@
 from asyncio import TimeoutError
 from functools import reduce
 from itertools import takewhile
-from typing import List, Optional, Tuple, Union
+from typing import List, Optional, Union
 
 from aiohttp import ClientSession
 from cachetools import TTLCache
@@ -16,7 +16,7 @@ from telethon.tl.custom import Button
 from telethon.tl.patched import Message
 from tenacity import retry, stop_after_attempt, stop_after_delay
 
-from .. import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
+from .. import SEARCH_RESULT_TYPE, bot
 from ..ascii2d import ascii2d_search
 from ..config import config
 from ..ehentai import ehentai_search
@@ -166,7 +166,7 @@ async def handle_search(event: events.CallbackQuery.Event) -> None:
                 _file = await get_file_from_message(msg, event.chat_id)
                 if not _file:
                     continue
-                result, extra = await handle_search_mode(event.data, _file, client)
+                result = await handle_search_mode(event.data, _file, client)
                 # 如果媒体文件为视频，就不往回发了
                 if (document := msg.document) and document.mime_type == "video/mp4":
                     _file = None
@@ -180,17 +180,6 @@ async def handle_search(event: events.CallbackQuery.Event) -> None:
                         extra_file=_file,
                         buttons=buttons,
                     )
-                if extra:
-                    for caption, __file in await extra(_file, client):
-                        await send_search_results(
-                            bot,
-                            event.chat_id,
-                            caption,
-                            msg,
-                            file=__file,
-                            extra_file=_file,
-                            buttons=buttons,
-                        )
             except Exception as e:
                 logger.exception(e)
                 await bot.send_message(
@@ -237,30 +226,29 @@ async def get_messages_to_search(msg: Message) -> List[Message]:
 @async_cached(cache=TTLCache(maxsize=16, ttl=180))  # type: ignore
 async def handle_search_mode(
     event_data: bytes, file: bytes, client: ClientSession
-) -> Tuple[SEARCH_RESULT_TYPE, Optional[SEARCH_FUNCTION_TYPE]]:
+) -> SEARCH_RESULT_TYPE:
     result_list = []
-    extra = None
 
     if event_data == b"Ascii2D":
         result_list = await ascii2d_search(file, client)
     elif event_data == b"Iqdb":
-        result_list, extra = await iqdb_search(file, client)
+        result_list = await iqdb_search(file, client)
     elif event_data == b"WhatAnime":
         result_list = await whatanime_search(file, client)
     elif event_data == b"EHentai":
-        result_list, extra = await ehentai_search(file, client)
+        result_list = await ehentai_search(file, client)
     elif event_data == b"SauceNAO":
-        result_list, extra = await saucenao_search(file, client, "all")
+        result_list = await saucenao_search(file, client, "all")
     elif event_data == b"Pixiv":
-        result_list, extra = await saucenao_search(file, client, "pixiv")
+        result_list = await saucenao_search(file, client, "pixiv")
     elif event_data == b"Danbooru":
-        result_list, extra = await saucenao_search(file, client, "danbooru")
+        result_list = await saucenao_search(file, client, "danbooru")
     elif event_data == b"Anime":
-        result_list, extra = await saucenao_search(file, client, "anime")
+        result_list = await saucenao_search(file, client, "anime")
     elif event_data == b"Doujin":
-        result_list, extra = await saucenao_search(file, client, "doujin")
+        result_list = await saucenao_search(file, client, "doujin")
 
-    return result_list, extra
+    return result_list
 
 
 async def send_search_results(
