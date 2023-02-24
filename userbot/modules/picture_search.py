@@ -227,28 +227,18 @@ async def get_messages_to_search(msg: Message) -> List[Message]:
 async def handle_search_mode(
     event_data: bytes, file: bytes, client: ClientSession
 ) -> SEARCH_RESULT_TYPE:
-    result_list = []
-
     if event_data == b"Ascii2D":
-        result_list = await ascii2d_search(file, client)
+        return await ascii2d_search(file, client)
     elif event_data == b"Iqdb":
-        result_list = await iqdb_search(file, client)
+        return await iqdb_search(file, client)
     elif event_data == b"WhatAnime":
-        result_list = await whatanime_search(file, client)
+        return await whatanime_search(file, client)
     elif event_data == b"EHentai":
-        result_list = await ehentai_search(file, client)
+        return await ehentai_search(file, client)
     elif event_data == b"SauceNAO":
-        result_list = await saucenao_search(file, client, "all")
-    elif event_data == b"Pixiv":
-        result_list = await saucenao_search(file, client, "pixiv")
-    elif event_data == b"Danbooru":
-        result_list = await saucenao_search(file, client, "danbooru")
-    elif event_data == b"Anime":
-        result_list = await saucenao_search(file, client, "anime")
-    elif event_data == b"Doujin":
-        result_list = await saucenao_search(file, client, "doujin")
+        return await saucenao_search(file, client, "all")
 
-    return result_list
+    return await saucenao_search(file, client, str(event_data).lower())
 
 
 async def send_search_results(
