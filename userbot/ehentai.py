@@ -78,9 +78,9 @@ async def ehentai_title_search(
 async def search_result_filter(
     res: EHentaiResponse,
 ) -> SEARCH_RESULT_TYPE:
-    _url = get_hyperlink(res.url)
+    url = get_hyperlink(res.url)
     if not res.raw:
-        return [(f"EHentai 搜索结果为空\nVia: {_url}", None)]
+        return [(f"EHentai 搜索结果为空\nVia: {url}", None)]
 
     # 尝试过滤已删除的
     if not_expunged_res := [
@@ -139,7 +139,7 @@ async def search_result_filter(
         f"Type: {selected_res.type}",
         f"Date: {date}",
         f"Source: {get_hyperlink(selected_res.url)}",
-        f"Via: {_url}",
+        f"Via: {url}",
     ]
     return [
         (
