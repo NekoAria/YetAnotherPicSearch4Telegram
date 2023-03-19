@@ -1,8 +1,8 @@
 from contextlib import suppress
 from functools import update_wrapper
-from typing import Optional
+from typing import Dict, Optional
 
-from aiohttp import ClientSession
+from aiohttp import ClientSession, TCPConnector
 from cachetools.keys import hashkey
 from pyquery import PyQuery
 from yarl import URL
@@ -10,14 +10,40 @@ from yarl import URL
 from .config import config
 
 DEFAULT_HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/99.0.4844.82 Safari/537.36"
+    "User-Agent": (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+        "AppleWebKit/537.36 (KHTML, like Gecko) "
+        "Chrome/99.0.4844.82 Safari/537.36"
+    )
 }
+
+
+def get_session_with_proxy(headers: Optional[Dict[str, str]] = None) -> ClientSession:
+    if config.proxy and config.proxy.startswith("socks"):
+        try:
+            from aiohttp_socks import ProxyConnector
+
+            connector = ProxyConnector.from_url(config.proxy)
+        except ModuleNotFoundError:
+            connector = TCPConnector()
+    else:
+        connector = TCPConnector()
+
+    session = ClientSession(connector=connector, headers=headers)
+
+    if config.proxy and not config.proxy.startswith("socks"):
+        from functools import partial
+
+        session.get = partial(session.get, proxy=config.proxy)  # type: ignore
+        session.post = partial(session.post, proxy=config.proxy)  # type: ignore
+
+    return session
 
 
 async def get_bytes_by_url(url: str, cookies: Optional[str] = None) -> Optional[bytes]:
     headers = {"Cookie": cookies, **DEFAULT_HEADERS} if cookies else DEFAULT_HEADERS
-    async with ClientSession(headers=headers) as session:
-        async with session.get(url, proxy=config.proxy) as resp:
+    async with get_session_with_proxy(headers=headers) as session:
+        async with session.get(url) as resp:
             if resp.status < 400 and (image_bytes := await resp.read()):
                 return image_bytes
     return None
@@ -37,10 +63,10 @@ def handle_source(source: str) -> str:
 async def get_source(url: str) -> str:
     source = url
     if host := URL(source).host:
-        async with ClientSession(
+        async with get_session_with_proxy(
             headers=None if host == "danbooru.donmai.us" else DEFAULT_HEADERS
         ) as session:
-            async with session.get(source, proxy=config.proxy) as resp:
+            async with session.get(source) as resp:
                 if resp.status >= 400:
                     return ""
 

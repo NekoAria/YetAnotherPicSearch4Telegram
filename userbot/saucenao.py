@@ -9,6 +9,7 @@ from yarl import URL
 from . import SEARCH_RESULT_TYPE, bot
 from .config import config
 from .ehentai import ehentai_title_search
+from .nhentai import nhentai_title_search
 from .utils import get_bytes_by_url, get_hyperlink, get_source
 from .whatanime import whatanime_search
 
@@ -129,11 +130,24 @@ async def get_final_res(
         final_res.extend(await whatanime_search(file, client))
     elif selected_res.index_id in SAUCENAO_DB["doujin"]:  # type: ignore
         title = selected_res.title.replace("-", "")
-        final_res.extend(await ehentai_title_search(title))
+        final_res.extend(await search_on_ehentai_and_nhentai(title))
     # 如果搜索结果为 fakku ，额外返回 ehentai 的搜索结果
     elif selected_res.index_id == SAUCENAO_DB["fakku"]:
-        final_res.extend(
-            await ehentai_title_search(f"{selected_res.author} {selected_res.title}")
-        )
+        title = f"{selected_res.author} {selected_res.title}"
+        final_res.extend(await search_on_ehentai_and_nhentai(title))
 
     return final_res
+
+
+async def search_on_ehentai_and_nhentai(title: str) -> SEARCH_RESULT_TYPE:
+    title_search_result = await ehentai_title_search(title)
+
+    if (
+        title_search_result[0][0].startswith("EHentai 搜索结果为空")
+        and config.nhentai_useragent
+        and config.nhentai_cookies
+    ):
+        title_search_result.append(("自动使用 NHentai 进行搜索", None))
+        title_search_result.extend(await nhentai_title_search(title))
+
+    return title_search_result
