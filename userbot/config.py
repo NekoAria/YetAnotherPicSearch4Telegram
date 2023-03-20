@@ -34,4 +34,4 @@ class Config(BaseSettings):
         return v
 
 
-config = Config(_env_file=".env", _env_file_encoding="utf-8")
+config = Config(_env_file=".env", _env_file_encoding="utf-8")  # type: ignore

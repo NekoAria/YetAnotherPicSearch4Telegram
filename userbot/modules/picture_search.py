@@ -1,7 +1,8 @@
 from asyncio import TimeoutError
+from collections import defaultdict
 from functools import reduce
 from itertools import takewhile
-from typing import List, Optional, Union
+from typing import Dict, List, Optional, Union
 
 from aiohttp import ClientSession
 from cachetools import TTLCache
@@ -16,7 +17,7 @@ from telethon.tl.custom import Button
 from telethon.tl.patched import Message
 from tenacity import retry, stop_after_attempt, stop_after_delay
 
-from .. import SEARCH_RESULT_TYPE, bot
+from .. import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
 from ..ascii2d import ascii2d_search
 from ..config import config
 from ..ehentai import ehentai_search
@@ -227,18 +228,23 @@ async def get_messages_to_search(msg: Message) -> List[Message]:
 async def handle_search_mode(
     event_data: bytes, file: bytes, client: ClientSession
 ) -> SEARCH_RESULT_TYPE:
-    if event_data == b"Ascii2D":
-        return await ascii2d_search(file, client)
-    elif event_data == b"Iqdb":
-        return await iqdb_search(file, client)
-    elif event_data == b"WhatAnime":
-        return await whatanime_search(file, client)
-    elif event_data == b"EHentai":
-        return await ehentai_search(file, client)
-    elif event_data == b"SauceNAO":
-        return await saucenao_search(file, client, "all")
+    search_function_dict: Dict[bytes, SEARCH_FUNCTION_TYPE] = defaultdict(
+        lambda: lambda file, client: saucenao_search(
+            file, client, event_data.decode().lower()
+        )
+    )
+    search_function_dict.update(
+        {
+            b"Ascii2D": ascii2d_search,
+            b"EHentai": ehentai_search,
+            b"Iqdb": iqdb_search,
+            b"WhatAnime": whatanime_search,
+            b"SauceNAO": lambda file, client: saucenao_search(file, client, "all"),
+        }
+    )
 
-    return await saucenao_search(file, client, str(event_data).lower())
+    search_function = search_function_dict[event_data]
+    return await search_function(file, client)
 
 
 async def send_search_results(
