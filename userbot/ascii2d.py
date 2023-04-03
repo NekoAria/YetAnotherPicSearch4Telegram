@@ -1,15 +1,14 @@
 from typing import List, Tuple
 
-from aiohttp import ClientSession
+from httpx import URL, AsyncClient
 from PicImageSearch import Ascii2D
 from PicImageSearch.model import Ascii2DItem, Ascii2DResponse
-from yarl import URL
 
 from . import SEARCH_RESULT_TYPE
 from .utils import get_bytes_by_url, get_hyperlink, get_website_mark
 
 
-async def ascii2d_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_TYPE:
+async def ascii2d_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
     ascii2d_color = Ascii2D(client=client)
     color_res = await ascii2d_color.search(file=file)
     if not color_res.raw:

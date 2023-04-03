@@ -6,28 +6,17 @@ from difflib import SequenceMatcher
 from typing import Any, Dict
 
 import arrow
-from aiohttp import ClientSession
+from httpx import AsyncClient
 from PicImageSearch import EHentai
 from PicImageSearch.model import EHentaiResponse
 from pyquery import PyQuery
 
 from . import SEARCH_RESULT_TYPE
 from .config import config
-from .utils import (
-    DEFAULT_HEADERS,
-    get_bytes_by_url,
-    get_hyperlink,
-    get_session_with_proxy,
-)
-
-EHENTAI_HEADERS = (
-    {"Cookie": config.exhentai_cookies, **DEFAULT_HEADERS}
-    if config.exhentai_cookies
-    else DEFAULT_HEADERS
-)
+from .utils import DEFAULT_HEADERS, get_bytes_by_url, get_hyperlink, parse_cookies
 
 
-async def ehentai_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_TYPE:
+async def ehentai_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
     ex = bool(config.exhentai_cookies)
     ehentai = EHentai(client=client)
 
@@ -52,16 +41,20 @@ async def ehentai_title_search(
     url = "https://exhentai.org" if config.exhentai_cookies else "https://e-hentai.org"
     params: Dict[str, Any] = {"f_search": title}
 
-    async with get_session_with_proxy(headers=EHENTAI_HEADERS) as session:
-        resp = await session.get(url, proxy=config.proxy, params=params)
-        if res := EHentaiResponse(await resp.text(), str(resp.url)):
+    async with AsyncClient(
+        headers=DEFAULT_HEADERS,
+        cookies=parse_cookies(config.exhentai_cookies),
+        proxies=config.proxy,
+    ) as session:
+        resp = await session.get(url, params=params)
+        if res := EHentaiResponse(resp.text, str(resp.url)):
             if not res.raw:
                 # 如果第一次没找到，使搜索结果包含被删除的部分，并重新搜索
                 params["advsearch"] = 1
                 params["f_sname"] = "on"
                 params["f_sh"] = "on"
                 resp = await session.get(url, params=params)
-                res = EHentaiResponse(await resp.text(), str(resp.url))
+                res = EHentaiResponse(resp.text, str(resp.url))
 
             # 只保留标题和搜索关键词相关度较高的结果，并排序，以此来提高准确度
             if res.raw:

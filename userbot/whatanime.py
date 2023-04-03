@@ -1,14 +1,14 @@
 import math
 from typing import Any, Dict
 
-from aiohttp import ClientSession
+from httpx import AsyncClient
 from PicImageSearch import TraceMoe
 
 from . import SEARCH_RESULT_TYPE, bot
 from .utils import get_bytes_by_url
 
 
-async def whatanime_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_TYPE:
+async def whatanime_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
     whatanime = TraceMoe(client=client)
     res = await whatanime.search(file=file)
     if res and res.raw:

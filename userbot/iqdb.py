@@ -1,12 +1,11 @@
-from aiohttp import ClientSession
+from httpx import URL, AsyncClient
 from PicImageSearch import Iqdb
-from yarl import URL
 
 from . import SEARCH_RESULT_TYPE, bot
 from .utils import get_bytes_by_url, get_hyperlink, get_source
 
 
-async def iqdb_search(file: bytes, client: ClientSession) -> SEARCH_RESULT_TYPE:
+async def iqdb_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
     iqdb = Iqdb(client=client)
     res = await iqdb.search(file=file)
     if not res.raw:

@@ -2,10 +2,9 @@ from contextlib import suppress
 from functools import update_wrapper
 from typing import Dict, Optional
 
-from aiohttp import ClientSession, TCPConnector
 from cachetools.keys import hashkey
+from httpx import URL, AsyncClient
 from pyquery import PyQuery
-from yarl import URL
 
 from .config import config
 
@@ -18,34 +17,13 @@ DEFAULT_HEADERS = {
 }
 
 
-def get_session_with_proxy(headers: Optional[Dict[str, str]] = None) -> ClientSession:
-    if config.proxy and config.proxy.startswith("socks"):
-        try:
-            from aiohttp_socks import ProxyConnector
-
-            connector = ProxyConnector.from_url(config.proxy)
-        except ModuleNotFoundError:
-            connector = TCPConnector()
-    else:
-        connector = TCPConnector()
-
-    session = ClientSession(connector=connector, headers=headers)
-
-    if config.proxy and not config.proxy.startswith("socks"):
-        from functools import partial
-
-        session.get = partial(session.get, proxy=config.proxy)  # type: ignore
-        session.post = partial(session.post, proxy=config.proxy)  # type: ignore
-
-    return session
-
-
 async def get_bytes_by_url(url: str, cookies: Optional[str] = None) -> Optional[bytes]:
-    headers = {"Cookie": cookies, **DEFAULT_HEADERS} if cookies else DEFAULT_HEADERS
-    async with get_session_with_proxy(headers=headers) as session:
-        async with session.get(url) as resp:
-            if resp.status < 400 and (image_bytes := await resp.read()):
-                return image_bytes
+    async with AsyncClient(
+        headers=DEFAULT_HEADERS, cookies=parse_cookies(cookies), proxies=config.proxy
+    ) as session:
+        resp = await session.get(url)
+        if resp.status_code < 400:
+            return resp.content
     return None
 
 
@@ -63,23 +41,21 @@ def handle_source(source: str) -> str:
 async def get_source(url: str) -> str:
     source = url
     if host := URL(source).host:
-        async with get_session_with_proxy(
-            headers=None if host == "danbooru.donmai.us" else DEFAULT_HEADERS
-        ) as session:
-            async with session.get(source) as resp:
-                if resp.status >= 400:
-                    return ""
+        headers = None if host == "danbooru.donmai.us" else DEFAULT_HEADERS
+        async with AsyncClient(headers=headers, proxies=config.proxy) as session:
+            resp = await session.get(source)
+            if resp.status_code >= 400:
+                return ""
 
-                html = await resp.text()
-                if host in ["danbooru.donmai.us", "gelbooru.com"]:
-                    source = PyQuery(html)(".image-container").attr(
-                        "data-normalized-source"
-                    )
+            if host in ["danbooru.donmai.us", "gelbooru.com"]:
+                source = PyQuery(resp.text)(".image-container").attr(
+                    "data-normalized-source"
+                )
 
-                elif host in ["yande.re", "konachan.com"]:
-                    source = PyQuery(html)("#post_source").attr("value")
-                    if not source:
-                        source = PyQuery(html)('a[href^="/pool/show/"]').text()
+            elif host in ["yande.re", "konachan.com"]:
+                source = PyQuery(resp.text)("#post_source").attr("value")
+                if not source:
+                    source = PyQuery(resp.text)('a[href^="/pool/show/"]').text()
 
     return handle_source(source) if (source and URL(source).host) else (source or "")
 
@@ -103,17 +79,11 @@ def get_hyperlink(href: str, text: Optional[str] = None) -> str:
 
 
 async def get_first_frame_from_video(video: bytes) -> Optional[bytes]:
-    async with ClientSession(headers=DEFAULT_HEADERS) as session:
-        resp = await session.post(
-            "https://file.io", data={"file": video}, proxy=config.proxy
-        )
+    async with AsyncClient(headers=DEFAULT_HEADERS, proxies=config.proxy) as session:
+        resp = await session.post("https://file.io", data={"file": video})
         link = (await resp.json())["link"]
-        resp = await session.get(
-            "https://ezgif.com/video-to-jpg",
-            params={"url": link},
-            proxy=config.proxy,
-        )
-        d = PyQuery(await resp.text())
+        resp = await session.get("https://ezgif.com/video-to-jpg", params={"url": link})
+        d = PyQuery(resp.text)
         next_url = d("form").attr("action")
         _file = d("form > input[type=hidden]").attr("value")
         data = {
@@ -123,10 +93,8 @@ async def get_first_frame_from_video(video: bytes) -> Optional[bytes]:
             "size": "original",
             "fps": "10",
         }
-        resp = await session.post(
-            next_url, params={"ajax": "true"}, data=data, proxy=config.proxy
-        )
-        d = PyQuery(await resp.text())
+        resp = await session.post(next_url, params={"ajax": "true"}, data=data)
+        d = PyQuery(resp.text)
         first_frame_img_url = "https:" + d("img:nth-child(1)").attr("src")
         return await get_bytes_by_url(first_frame_img_url)
 
@@ -156,3 +124,12 @@ def async_cached(cache, key=hashkey):  # type: ignore
         return update_wrapper(wrapper, func)
 
     return decorator
+
+
+def parse_cookies(cookies_str: Optional[str] = None) -> Dict[str, str]:
+    cookies_dict: Dict[str, str] = {}
+    if cookies_str:
+        for line in cookies_str.split(";"):
+            key, value = line.strip().split("=", 1)
+            cookies_dict[key] = value
+    return cookies_dict

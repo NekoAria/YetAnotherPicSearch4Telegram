@@ -4,9 +4,9 @@ from functools import reduce
 from itertools import takewhile
 from typing import Dict, List, Optional, Union
 
-from aiohttp import ClientSession
 from cachetools import TTLCache
 from cachetools.keys import hashkey
+from httpx import AsyncClient
 from loguru import logger
 from PicImageSearch import Network
 from telethon import TelegramClient, events
@@ -226,7 +226,7 @@ async def get_messages_to_search(msg: Message) -> List[Message]:
 @retry(stop=(stop_after_attempt(3) | stop_after_delay(30)), reraise=True)
 @async_cached(cache=TTLCache(maxsize=16, ttl=180))  # type: ignore
 async def handle_search_mode(
-    event_data: bytes, file: bytes, client: ClientSession
+    event_data: bytes, file: bytes, client: AsyncClient
 ) -> SEARCH_RESULT_TYPE:
     search_function_dict: Dict[bytes, SEARCH_FUNCTION_TYPE] = defaultdict(
         lambda: lambda file, client: saucenao_search(

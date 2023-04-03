@@ -1,10 +1,9 @@
 import re
 from asyncio import sleep
 
-from aiohttp import ClientSession
+from httpx import URL, AsyncClient
 from PicImageSearch import SauceNAO
 from PicImageSearch.model import SauceNAOItem, SauceNAOResponse
-from yarl import URL
 
 from . import SEARCH_RESULT_TYPE, bot
 from .config import config
@@ -24,7 +23,7 @@ SAUCENAO_DB = {
 
 
 async def saucenao_search(
-    file: bytes, client: ClientSession, mode: str
+    file: bytes, client: AsyncClient, mode: str
 ) -> SEARCH_RESULT_TYPE:
     db = SAUCENAO_DB[mode]
     if isinstance(db, list):
@@ -89,7 +88,7 @@ def get_best_result(res: SauceNAOResponse, selected_res: SauceNAOItem) -> SauceN
 
 async def get_final_res(
     file: bytes,
-    client: ClientSession,
+    client: AsyncClient,
     res: SauceNAOResponse,
     selected_res: SauceNAOItem,
 ) -> SEARCH_RESULT_TYPE:

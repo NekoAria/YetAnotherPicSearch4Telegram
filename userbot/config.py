@@ -12,7 +12,7 @@ class Config(BaseSettings):
     allowed_users: List[int] = []
     # 允许使用这个 bot 的群组或频道列表
     allowed_chats: List[int] = []
-    # 大部分请求所使用的代理: http / socks4 / socks5
+    # 大部分请求所使用的代理: http / socks4(a) / socks5(h)
     proxy: Optional[str] = None
     # telegram api id
     api_id: int = 1025907  # get it from https://core.telegram.org/api/obtaining_api_id
