@@ -1,7 +1,10 @@
+import asyncio
+from collections import defaultdict
 from contextlib import suppress
-from functools import update_wrapper
-from typing import Dict, Optional
+from functools import update_wrapper, wraps
+from typing import Any, Awaitable, Callable, DefaultDict, Dict, Optional
 
+import arrow
 from cachetools.keys import hashkey
 from httpx import URL, AsyncClient
 from pyquery import PyQuery
@@ -133,3 +136,26 @@ def parse_cookies(cookies_str: Optional[str] = None) -> Dict[str, str]:
             key, value = line.strip().split("=", 1)
             cookies_dict[key] = value
     return cookies_dict
+
+
+def async_lock(
+    freq: float = 8,
+) -> Callable[[Callable[..., Awaitable[Any]]], Callable[..., Awaitable[Any]]]:
+    def decorator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+        locks: DefaultDict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+        call_times: DefaultDict[str, arrow.Arrow] = defaultdict(arrow.now)
+
+        @wraps(func)
+        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+            async with locks[func.__name__]:
+                last_call_time = call_times[func.__name__]
+                elapsed_time = arrow.now() - last_call_time
+                if elapsed_time.total_seconds() < freq:
+                    await asyncio.sleep(freq - elapsed_time.total_seconds())
+                result = await func(*args, **kwargs)
+                call_times[func.__name__] = arrow.now()
+                return result
+
+        return wrapper
+
+    return decorator

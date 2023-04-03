@@ -1,6 +1,5 @@
 import itertools
 import re
-from asyncio import sleep
 from collections import defaultdict
 from difflib import SequenceMatcher
 from typing import Any, Dict
@@ -13,22 +12,24 @@ from pyquery import PyQuery
 
 from . import SEARCH_RESULT_TYPE
 from .config import config
-from .utils import DEFAULT_HEADERS, get_bytes_by_url, get_hyperlink, parse_cookies
+from .utils import (
+    DEFAULT_HEADERS,
+    async_lock,
+    get_bytes_by_url,
+    get_hyperlink,
+    parse_cookies,
+)
 
 
+@async_lock()
 async def ehentai_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
     ex = bool(config.exhentai_cookies)
     ehentai = EHentai(client=client)
 
     if res := await ehentai.search(file=file, ex=ex):
         if "Please wait a bit longer between each file search" in res.origin:
-            await sleep(30 / 4)
-            return await ehentai_search(file, client)
+            return await ehentai_search(file, client)  # type: ignore
 
-        if not res.raw:
-            # 如果第一次没找到，使搜索结果包含被删除的部分，并重新搜索
-            resp_text, resp_url, _ = await ehentai.get(f"{res.url}&fs_exp=on")
-            res = EHentaiResponse(resp_text, resp_url)
         return await search_result_filter(res)
 
     return [("EHentai 暂时无法使用", None)]

@@ -1,5 +1,4 @@
 import re
-from asyncio import sleep
 
 from httpx import URL, AsyncClient
 from PicImageSearch import SauceNAO
@@ -9,7 +8,7 @@ from . import SEARCH_RESULT_TYPE, bot
 from .config import config
 from .ehentai import ehentai_title_search
 from .nhentai import nhentai_title_search
-from .utils import get_bytes_by_url, get_hyperlink, get_source
+from .utils import async_lock, get_bytes_by_url, get_hyperlink, get_source
 from .whatanime import whatanime_search
 
 SAUCENAO_DB = {
@@ -22,6 +21,7 @@ SAUCENAO_DB = {
 }
 
 
+@async_lock()
 async def saucenao_search(
     file: bytes, client: AsyncClient, mode: str
 ) -> SEARCH_RESULT_TYPE:
@@ -45,8 +45,7 @@ async def saucenao_search(
         and res.status == 429
         and "4 searches every 30 seconds" in res.origin["header"]["message"]
     ):
-        await sleep(30 / 4)
-        return await saucenao_search(file, client, mode)
+        return await saucenao_search(file, client, mode)  # type: ignore
 
     if not res or not res.raw:
         return [("SauceNAO 暂时无法使用", None)]
