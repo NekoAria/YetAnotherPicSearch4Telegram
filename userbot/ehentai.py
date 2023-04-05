@@ -1,5 +1,4 @@
 import itertools
-import re
 from collections import defaultdict
 from difflib import SequenceMatcher
 from typing import Any, Dict
@@ -18,6 +17,7 @@ from .utils import (
     get_bytes_by_url,
     get_hyperlink,
     parse_cookies,
+    preprocess_search_query,
 )
 
 
@@ -38,9 +38,9 @@ async def ehentai_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE
 async def ehentai_title_search(
     title: str,
 ) -> SEARCH_RESULT_TYPE:
-    title = re.sub(r"●|~| ::: |[中国翻訳]", " ", title).strip()
+    query = preprocess_search_query(title)
     url = "https://exhentai.org" if config.exhentai_cookies else "https://e-hentai.org"
-    params: Dict[str, Any] = {"f_search": title}
+    params: Dict[str, Any] = {"f_search": query}
 
     async with AsyncClient(
         headers=DEFAULT_HEADERS,
@@ -60,7 +60,7 @@ async def ehentai_title_search(
             # 只保留标题和搜索关键词相关度较高的结果，并排序，以此来提高准确度
             if res.raw:
                 raw_with_ratio = [
-                    (i, SequenceMatcher(lambda x: x == " ", title, i.title).ratio())
+                    (i, SequenceMatcher(lambda x: x == " ", query, i.title).ratio())
                     for i in res.raw
                 ]
                 raw_with_ratio.sort(key=lambda x: x[1], reverse=True)

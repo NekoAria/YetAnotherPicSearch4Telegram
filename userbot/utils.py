@@ -1,4 +1,5 @@
 import asyncio
+import re
 from collections import defaultdict
 from contextlib import suppress
 from functools import update_wrapper, wraps
@@ -159,3 +160,16 @@ def async_lock(
         return wrapper
 
     return decorator
+
+
+def preprocess_search_query(query: str) -> str:
+    query = re.sub(r"●|~|～|、|:::|\[中国翻訳]", " ", query)
+    # 去除独立的英文、日文、中文字符
+    for i in [
+        r"\b[A-Za-z]\b",
+        r"\b[\u4e00-\u9fff]\b",
+        r"\b[\u3040-\u309f\u30a0-\u30ff]\b",
+    ]:
+        query = re.sub(i, "", query)
+
+    return query.strip()

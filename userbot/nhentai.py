@@ -1,4 +1,3 @@
-import re
 from typing import List
 
 import arrow
@@ -8,7 +7,12 @@ from pyquery import PyQuery
 
 from . import SEARCH_RESULT_TYPE
 from .config import config
-from .utils import get_bytes_by_url, get_hyperlink, parse_cookies
+from .utils import (
+    get_bytes_by_url,
+    get_hyperlink,
+    parse_cookies,
+    preprocess_search_query,
+)
 
 NHENTAI_HEADERS = (
     {
@@ -65,9 +69,9 @@ async def update_nhentai_info(item: NHentaiItem) -> None:
 
 
 async def nhentai_title_search(title: str) -> SEARCH_RESULT_TYPE:
-    title = re.sub(r"●|~| ::: |[中国翻訳]", " ", title).strip()
+    query = preprocess_search_query(title)
     url = "https://nhentai.net/search/"
-    params = {"q": title}
+    params = {"q": query}
     async with AsyncClient(
         headers=NHENTAI_HEADERS, cookies=NHENTAI_COOKIES, proxies=config.proxy
     ) as session:
