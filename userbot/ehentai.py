@@ -1,4 +1,5 @@
 import itertools
+import re
 from collections import defaultdict
 from difflib import SequenceMatcher
 from typing import Any, Dict
@@ -90,11 +91,13 @@ async def search_result_filter(
     if not_themeless_res := [i for i in res.raw if "themeless" not in " ".join(i.tags)]:
         res.raw = not_themeless_res
 
-    # 尝试过滤评分只有 1 星的
-    if not_1_star_res := [
-        i for i in res.raw if ("-64px" not in PyQuery(i.origin)("div.ir").attr("style"))
+    # 尝试过滤评分低于 3 星的
+    if above_3_star_res := [
+        i
+        for i in res.raw
+        if get_star_rating(PyQuery(i.origin)("div.ir").attr("style")) >= 3
     ]:
-        res.raw = not_1_star_res
+        res.raw = above_3_star_res
 
     # 尽可能过滤掉非预期结果(大概
     priority = defaultdict(lambda: 0)
@@ -145,3 +148,11 @@ async def search_result_filter(
             thumbnail,
         )
     ]
+
+
+def get_star_rating(css_style: str) -> float:
+    x, y = re.search(r"(-?\d+)px (-\d+)px", css_style).groups()  # type: ignore
+    star_rating = 5 - int(x.rstrip("px")) / -16
+    if y == "-21px":
+        star_rating -= 0.5
+    return star_rating
