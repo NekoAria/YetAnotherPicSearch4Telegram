@@ -91,8 +91,8 @@ async def get_first_frame_from_video(video: bytes) -> Optional[bytes]:
     async with AsyncClient(
         headers=DEFAULT_HEADERS, proxies=config.proxy, follow_redirects=True
     ) as session:
-        resp = await session.post("https://file.io", data={"file": video})
-        link = (await resp.json())["link"]
+        resp = await session.post("https://file.io", files={"file": video})
+        link = resp.json()["link"]
         resp = await session.get("https://ezgif.com/video-to-jpg", params={"url": link})
         d = PyQuery(resp.text)
         next_url = d("form").attr("action")
