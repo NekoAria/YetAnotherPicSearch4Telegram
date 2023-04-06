@@ -23,7 +23,10 @@ DEFAULT_HEADERS = {
 
 async def get_bytes_by_url(url: str, cookies: Optional[str] = None) -> Optional[bytes]:
     async with AsyncClient(
-        headers=DEFAULT_HEADERS, cookies=parse_cookies(cookies), proxies=config.proxy
+        headers=DEFAULT_HEADERS,
+        cookies=parse_cookies(cookies),
+        proxies=config.proxy,
+        follow_redirects=True,
     ) as session:
         resp = await session.get(url)
         if resp.status_code < 400:
@@ -46,7 +49,9 @@ async def get_source(url: str) -> str:
     source = url
     if host := URL(source).host:
         headers = None if host == "danbooru.donmai.us" else DEFAULT_HEADERS
-        async with AsyncClient(headers=headers, proxies=config.proxy) as session:
+        async with AsyncClient(
+            headers=headers, proxies=config.proxy, follow_redirects=True
+        ) as session:
             resp = await session.get(source)
             if resp.status_code >= 400:
                 return ""
@@ -83,7 +88,9 @@ def get_hyperlink(href: str, text: Optional[str] = None) -> str:
 
 
 async def get_first_frame_from_video(video: bytes) -> Optional[bytes]:
-    async with AsyncClient(headers=DEFAULT_HEADERS, proxies=config.proxy) as session:
+    async with AsyncClient(
+        headers=DEFAULT_HEADERS, proxies=config.proxy, follow_redirects=True
+    ) as session:
         resp = await session.post("https://file.io", data={"file": video})
         link = (await resp.json())["link"]
         resp = await session.get("https://ezgif.com/video-to-jpg", params={"url": link})
