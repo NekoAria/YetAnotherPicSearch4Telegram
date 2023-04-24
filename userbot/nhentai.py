@@ -8,6 +8,7 @@ from pyquery import PyQuery
 from . import SEARCH_RESULT_TYPE
 from .config import config
 from .utils import (
+    filter_results_with_ratio,
     get_bytes_by_url,
     get_hyperlink,
     parse_cookies,
@@ -77,6 +78,9 @@ async def nhentai_title_search(title: str) -> SEARCH_RESULT_TYPE:
     ) as session:
         resp = await session.get(url, params=params)
         if res := NHentaiResponse(resp.text, str(resp.url)):
+            # 只保留标题和搜索关键词相关度较高的结果，并排序，以此来提高准确度
+            if res.raw:
+                res.raw = filter_results_with_ratio(res, title)
             return await search_result_filter(res)
 
         return [("NHentai 暂时无法使用", None)]

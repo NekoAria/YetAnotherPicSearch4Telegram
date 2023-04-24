@@ -2,15 +2,27 @@ import asyncio
 import re
 from collections import defaultdict
 from contextlib import suppress
+from difflib import SequenceMatcher
 from functools import update_wrapper, wraps
-from typing import Any, Awaitable, Callable, DefaultDict, Dict, Optional
+from typing import (
+    Any,
+    Awaitable,
+    Callable,
+    DefaultDict,
+    Dict,
+    List,
+    Optional,
+    Union,
+)
 
 import arrow
 from cachetools.keys import hashkey
 from httpx import URL, AsyncClient
+from PicImageSearch.model.ehentai import EHentaiItem, EHentaiResponse
 from pyquery import PyQuery
 
 from .config import config
+from .nhentai import NHentaiItem, NHentaiResponse
 
 DEFAULT_HEADERS = {
     "User-Agent": (
@@ -170,7 +182,7 @@ def async_lock(
 
 
 def preprocess_search_query(query: str) -> str:
-    query = re.sub(r"●|~|～|、|:::|\[中国翻訳]", " ", query)
+    query = re.sub(r"●|~|～|〜|、|:::|\[中国翻訳]", " ", query)
     # 去除独立的英文、日文、中文字符
     for i in [
         r"\b[A-Za-z]\b",
@@ -180,3 +192,18 @@ def preprocess_search_query(query: str) -> str:
         query = re.sub(i, "", query)
 
     return query.strip()
+
+
+def filter_results_with_ratio(
+    res: Union[EHentaiResponse, NHentaiResponse], title: str
+) -> Union[List[EHentaiItem], List[NHentaiItem]]:
+    raw_with_ratio = [
+        (i, SequenceMatcher(lambda x: x == " ", title, i.title).ratio())
+        for i in res.raw
+    ]
+    raw_with_ratio.sort(key=lambda x: x[1], reverse=True)
+
+    if filtered := [i[0] for i in raw_with_ratio if i[1] > 0.65]:
+        return filtered
+
+    return [i[0] for i in raw_with_ratio]

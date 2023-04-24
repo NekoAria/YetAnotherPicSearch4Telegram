@@ -1,7 +1,6 @@
 import itertools
 import re
 from collections import defaultdict
-from difflib import SequenceMatcher
 from typing import Any, Dict
 
 import arrow
@@ -15,6 +14,7 @@ from .config import config
 from .utils import (
     DEFAULT_HEADERS,
     async_lock,
+    filter_results_with_ratio,
     get_bytes_by_url,
     get_hyperlink,
     parse_cookies,
@@ -60,15 +60,7 @@ async def ehentai_title_search(
 
             # 只保留标题和搜索关键词相关度较高的结果，并排序，以此来提高准确度
             if res.raw:
-                raw_with_ratio = [
-                    (i, SequenceMatcher(lambda x: x == " ", query, i.title).ratio())
-                    for i in res.raw
-                ]
-                raw_with_ratio.sort(key=lambda x: x[1], reverse=True)
-                if filtered := [i[0] for i in raw_with_ratio if i[1] > 0.65]:
-                    res.raw = filtered
-                else:
-                    res.raw = [i[0] for i in raw_with_ratio]
+                res.raw = filter_results_with_ratio(res, title)
             return await search_result_filter(res)
 
         return [("EHentai 暂时无法使用", None)]
