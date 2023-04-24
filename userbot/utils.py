@@ -22,7 +22,7 @@ from PicImageSearch.model.ehentai import EHentaiItem, EHentaiResponse
 from pyquery import PyQuery
 
 from .config import config
-from .nhentai import NHentaiItem, NHentaiResponse
+from .nhentai_model import NHentaiItem, NHentaiResponse
 
 DEFAULT_HEADERS = {
     "User-Agent": (
