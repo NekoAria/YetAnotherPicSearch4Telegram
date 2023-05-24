@@ -45,7 +45,7 @@ async def saucenao_search(
         and res.status == 429
         and "4 searches every 30 seconds" in res.origin["header"]["message"]
     ):
-        return await saucenao_search(file, client, mode)  # type: ignore
+        return await saucenao_search(file, client, mode)
 
     if not res or not res.raw:
         return [("SauceNAO 暂时无法使用", None)]

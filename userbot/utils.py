@@ -170,7 +170,7 @@ def async_lock(
     ) -> Callable[..., Coroutine[Any, Any, T]]:
         locks: DefaultDict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
         call_times: DefaultDict[str, arrow.Arrow] = defaultdict(
-            lambda: arrow.now().shift(second=-freq)
+            lambda: arrow.now().shift(seconds=-freq)
         )
 
         @wraps(func)

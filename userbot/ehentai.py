@@ -29,7 +29,7 @@ async def ehentai_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE
 
     if res := await ehentai.search(file=file, ex=ex):
         if "Please wait a bit longer between each file search" in res.origin:
-            return await ehentai_search(file, client)  # type: ignore
+            return await ehentai_search(file, client)
 
         return await search_result_filter(res)
 

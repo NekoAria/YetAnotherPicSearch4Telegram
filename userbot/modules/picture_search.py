@@ -229,16 +229,14 @@ async def handle_search_mode(
 ) -> SEARCH_RESULT_TYPE:
     search_function_dict: Dict[bytes, SEARCH_FUNCTION_TYPE] = {
         b"Ascii2D": ascii2d_search,
-        b"EHentai": ehentai_search,  # type: ignore
+        b"EHentai": ehentai_search,
         b"Iqdb": iqdb_search,
         b"WhatAnime": whatanime_search,
-        b"SauceNAO": lambda file, client: saucenao_search(file, client, "all"),  # type: ignore
+        b"SauceNAO": lambda file, client: saucenao_search(file, client, "all"),
     }
     search_function = search_function_dict.get(
         event_data,
-        lambda: lambda file, client: saucenao_search(
-            file, client, event_data.decode().lower()
-        ),
+        lambda file, client: saucenao_search(file, client, event_data.decode().lower()),
     )
     return await search_function(file, client)
 
