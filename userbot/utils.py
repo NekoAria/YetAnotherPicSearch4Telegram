@@ -190,7 +190,7 @@ def async_lock(
 
 
 def preprocess_search_query(query: str) -> str:
-    query = re.sub(r"●|~|～|〜|、|:::|\[中国翻訳]", " ", query)
+    query = re.sub(r"●|・|~|～|〜|、|×|:::|\s+-\s+|\[中国翻訳]", " ", query)
     # 去除独立的英文、日文、中文字符
     for i in [
         r"\b[A-Za-z]\b",
