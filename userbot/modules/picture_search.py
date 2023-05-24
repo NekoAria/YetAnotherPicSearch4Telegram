@@ -20,10 +20,12 @@ from .. import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
 from ..ascii2d import ascii2d_search
 from ..config import config
 from ..ehentai import ehentai_search
+from ..google import google_search
 from ..iqdb import iqdb_search
 from ..saucenao import saucenao_search
 from ..utils import async_cached, get_first_frame_from_video
 from ..whatanime import whatanime_search
+from ..yandex import yandex_search
 
 bot_name = ""
 allowed_users = [config.owner_id] + config.allowed_users
@@ -33,6 +35,10 @@ search_buttons = [
         Button.inline("Ascii2D"),
         Button.inline("Iqdb"),
         Button.inline("SauceNAO"),
+    ],
+    [
+        Button.inline("Google"),
+        Button.inline("Yandex"),
     ],
     [
         Button.inline("Pixiv"),
@@ -230,8 +236,10 @@ async def handle_search_mode(
     search_function_dict: Dict[bytes, SEARCH_FUNCTION_TYPE] = {
         b"Ascii2D": ascii2d_search,
         b"EHentai": ehentai_search,
+        b"Google": google_search,
         b"Iqdb": iqdb_search,
         b"WhatAnime": whatanime_search,
+        b"Yandex": yandex_search,
         b"SauceNAO": lambda file, client: saucenao_search(file, client, "all"),
     }
     search_function = search_function_dict.get(
