@@ -2,9 +2,10 @@ from httpx import URL, AsyncClient
 from PicImageSearch import Iqdb
 
 from . import SEARCH_RESULT_TYPE, bot
-from .utils import get_bytes_by_url, get_hyperlink, get_source
+from .utils import async_lock, get_bytes_by_url, get_hyperlink, get_source
 
 
+@async_lock()
 async def iqdb_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
     iqdb = Iqdb(client=client)
     res = await iqdb.search(file=file)

@@ -5,9 +5,10 @@ from httpx import AsyncClient
 from PicImageSearch import TraceMoe
 
 from . import SEARCH_RESULT_TYPE, bot
-from .utils import get_bytes_by_url
+from .utils import async_lock, get_bytes_by_url
 
 
+@async_lock()
 async def whatanime_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
     whatanime = TraceMoe(client=client)
     res = await whatanime.search(file=file)

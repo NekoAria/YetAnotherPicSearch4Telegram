@@ -1,5 +1,4 @@
 from asyncio import TimeoutError
-from collections import defaultdict
 from functools import reduce
 from itertools import takewhile
 from typing import Dict, List, Optional, Union
@@ -228,22 +227,19 @@ async def get_messages_to_search(msg: Message) -> List[Message]:
 async def handle_search_mode(
     event_data: bytes, file: bytes, client: AsyncClient
 ) -> SEARCH_RESULT_TYPE:
-    search_function_dict: Dict[bytes, SEARCH_FUNCTION_TYPE] = defaultdict(
-        lambda: lambda file, client: saucenao_search(  # type: ignore
+    search_function_dict: Dict[bytes, SEARCH_FUNCTION_TYPE] = {
+        b"Ascii2D": ascii2d_search,
+        b"EHentai": ehentai_search,  # type: ignore
+        b"Iqdb": iqdb_search,
+        b"WhatAnime": whatanime_search,
+        b"SauceNAO": lambda file, client: saucenao_search(file, client, "all"),  # type: ignore
+    }
+    search_function = search_function_dict.get(
+        event_data,
+        lambda: lambda file, client: saucenao_search(
             file, client, event_data.decode().lower()
-        )
+        ),
     )
-    search_function_dict.update(
-        {
-            b"Ascii2D": ascii2d_search,
-            b"EHentai": ehentai_search,  # type: ignore
-            b"Iqdb": iqdb_search,
-            b"WhatAnime": whatanime_search,
-            b"SauceNAO": lambda file, client: saucenao_search(file, client, "all"),  # type: ignore
-        }
-    )
-
-    search_function = search_function_dict[event_data]
     return await search_function(file, client)
 
 

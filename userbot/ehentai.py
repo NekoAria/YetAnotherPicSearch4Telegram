@@ -22,7 +22,7 @@ from .utils import (
 )
 
 
-@async_lock()
+@async_lock(freq=8)
 async def ehentai_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
     ex = bool(config.exhentai_cookies)
     ehentai = EHentai(client=client)

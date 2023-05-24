@@ -6,12 +6,13 @@ from difflib import SequenceMatcher
 from functools import update_wrapper, wraps
 from typing import (
     Any,
-    Awaitable,
     Callable,
+    Coroutine,
     DefaultDict,
     Dict,
     List,
     Optional,
+    TypeVar,
     Union,
 )
 
@@ -24,6 +25,7 @@ from pyquery import PyQuery
 from .config import config
 from .nhentai_model import NHentaiItem, NHentaiResponse
 
+T = TypeVar("T")
 DEFAULT_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -159,14 +161,20 @@ def parse_cookies(cookies_str: Optional[str] = None) -> Dict[str, str]:
 
 
 def async_lock(
-    freq: float = 8,
-) -> Callable[[Callable[..., Awaitable[Any]]], Callable[..., Awaitable[Any]]]:
-    def decorator(func: Callable[..., Awaitable[Any]]) -> Callable[..., Awaitable[Any]]:
+    freq: float = 1,
+) -> Callable[
+    [Callable[..., Coroutine[Any, Any, T]]], Callable[..., Coroutine[Any, Any, T]]
+]:
+    def decorator(
+        func: Callable[..., Coroutine[Any, Any, T]]
+    ) -> Callable[..., Coroutine[Any, Any, T]]:
         locks: DefaultDict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
-        call_times: DefaultDict[str, arrow.Arrow] = defaultdict(arrow.now)
+        call_times: DefaultDict[str, arrow.Arrow] = defaultdict(
+            lambda: arrow.now().shift(second=-freq)
+        )
 
         @wraps(func)
-        async def wrapper(*args: Any, **kwargs: Any) -> Any:
+        async def wrapper(*args: Any, **kwargs: Any) -> T:
             async with locks[func.__name__]:
                 last_call_time = call_times[func.__name__]
                 elapsed_time = arrow.now() - last_call_time

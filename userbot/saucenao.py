@@ -21,7 +21,7 @@ SAUCENAO_DB = {
 }
 
 
-@async_lock()
+@async_lock(freq=8)
 async def saucenao_search(
     file: bytes, client: AsyncClient, mode: str
 ) -> SEARCH_RESULT_TYPE:
