@@ -1,9 +1,9 @@
 arrow~=1.2.3
 cachetools~=5.3.0
-httpx~=0.23.3
-loguru~=0.6.0
+httpx~=0.24.1
+loguru~=0.7.0
 lxml~=4.9.2
-PicImageSearch~=3.9.0
+PicImageSearch~=3.9.1
 pydantic[dotenv]~=1.10.7
 pyquery~=2.0.0
 python-socks[asyncio]~=2.2.0;extra == "socks"
