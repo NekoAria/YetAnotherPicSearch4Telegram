@@ -34,9 +34,4 @@ async def search_result_filter(
         f"Source: {get_hyperlink(selected_res.url)}",
         f"Via: {url}",
     ]
-    return [
-        (
-            "\n".join([i for i in res_list if i]),
-            thumbnail,
-        )
-    ]
+    return [("\n".join([i for i in res_list if i]), thumbnail)]

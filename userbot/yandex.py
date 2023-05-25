@@ -21,18 +21,14 @@ async def search_result_filter(
     if not res.raw:
         return [(f"Yandex 搜索结果为空\nVia: {url}", None)]
 
-    selected_res = next((i for i in res.raw if i.thumbnail), res.raw[0])
-    if not selected_res.thumbnail:
-        return [(f"Yandex 搜索结果为空\nVia: {url}", None)]
-
-    thumbnail = await get_bytes_by_url(selected_res.thumbnail)
+    thumbnail = await get_bytes_by_url(res.raw[0].thumbnail)
     res_list = [
         "Yandex 搜索结果",
-        selected_res.size,
-        selected_res.title,
-        selected_res.source,
-        selected_res.content,
-        f"Source: {get_hyperlink(selected_res.url)}",
+        res.raw[0].size,
+        res.raw[0].title,
+        res.raw[0].source,
+        res.raw[0].content,
+        f"Source: {get_hyperlink(res.raw[0].url)}",
         f"Via: {url}",
     ]
     return [("\n".join([i for i in res_list if i]), thumbnail)]

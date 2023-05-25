@@ -41,11 +41,6 @@ async def iqdb_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
         thumbnail = await bot.upload_file(_thumbnail, file_name="image.jpg")
     else:
         thumbnail = None
-    final_res.append(
-        (
-            "\n".join([i for i in res_list if i]),
-            thumbnail,
-        )
-    )
+    final_res.append(("\n".join([i for i in res_list if i]), thumbnail))
 
     return final_res
