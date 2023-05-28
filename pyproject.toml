@@ -15,16 +15,16 @@ keywords = ["telegram", "ascii2d", "baidu", "e-hentai", "google", "iqdb", "sauce
 [tool.poetry.dependencies]
 python = "^3.8"
 arrow = "^1.2.3"
-cachetools = "^5.3.0"
+cachetools = "^5.3.1"
 httpx = "^0.24.1"
 loguru = "^0.7.0"
 lxml = "^4.9.2"
 PicImageSearch = "^3.9.2"
-pydantic = {extras = ["dotenv"], version = "^1.10.7"}
+pydantic = {extras = ["dotenv"], version = "^1.10.8"}
 pyquery = "^2.0.0"
-python-socks = {extras = ["asyncio"], version = "^2.2.0", optional = true}
+python-socks = {extras = ["asyncio"], version = "^2.3.0", optional = true}
 socksio = { version = "^1.0.0", optional = true }
-Telethon = "^1.27.0"
+Telethon = "^1.28.5"
 tenacity = "^8.2.2"
 
 [tool.poetry.extras]

@@ -1,12 +1,12 @@
 arrow~=1.2.3
-cachetools~=5.3.0
+cachetools~=5.3.1
 httpx~=0.24.1
 loguru~=0.7.0
 lxml~=4.9.2
 PicImageSearch~=3.9.2
-pydantic[dotenv]~=1.10.7
+pydantic[dotenv]~=1.10.8
 pyquery~=2.0.0
-python-socks[asyncio]~=2.2.0;extra == "socks"
+python-socks[asyncio]~=2.3.0;extra == "socks"
 socksio~=1.0.0;extra == "socks"
-Telethon~=1.27.0
+Telethon~=1.28.5
 tenacity~=8.2.2
