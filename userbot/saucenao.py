@@ -1,6 +1,6 @@
 import re
 
-from httpx import URL, AsyncClient
+from httpx import AsyncClient
 from PicImageSearch import SauceNAO
 from PicImageSearch.model import SauceNAOItem, SauceNAOResponse
 
@@ -8,7 +8,13 @@ from . import SEARCH_RESULT_TYPE, bot
 from .config import config
 from .ehentai import ehentai_title_search
 from .nhentai import nhentai_title_search
-from .utils import async_lock, get_bytes_by_url, get_hyperlink, get_source
+from .utils import (
+    async_lock,
+    get_bytes_by_url,
+    get_hyperlink,
+    get_source,
+    get_valid_url,
+)
 from .whatanime import whatanime_search
 
 SAUCENAO_DB = {
@@ -94,7 +100,7 @@ async def get_final_res(
     source = selected_res.source if selected_res.source != selected_res.title else ""
     if not source and selected_res.url:
         source = await get_source(selected_res.url)
-    if source and URL(source).host:
+    if source and get_valid_url(source):
         source = get_hyperlink(source)
 
     url = get_hyperlink(selected_res.url)

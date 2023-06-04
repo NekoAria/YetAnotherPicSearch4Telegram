@@ -18,7 +18,7 @@ from typing import (
 
 import arrow
 from cachetools.keys import hashkey
-from httpx import URL, AsyncClient
+from httpx import URL, AsyncClient, InvalidURL
 from PicImageSearch.model.ehentai import EHentaiItem, EHentaiResponse
 from pyquery import PyQuery
 
@@ -59,34 +59,46 @@ def handle_source(source: str) -> str:
     )
 
 
+def parse_source(resp_text: str, host: str) -> Optional[str]:
+    if host in ["danbooru.donmai.us", "gelbooru.com"]:
+        return PyQuery(resp_text)(".image-container").attr("data-normalized-source")
+
+    elif host in ["yande.re", "konachan.com"]:
+        source = PyQuery(resp_text)("#post_source").attr("value")
+        return source or PyQuery(resp_text)('a[href^="/pool/show/"]').text()
+
+    return ""
+
+
 async def get_source(url: str) -> str:
-    source = url
-    if host := URL(source).host:
-        headers = None if host == "danbooru.donmai.us" else DEFAULT_HEADERS
-        async with AsyncClient(
-            headers=headers, proxies=config.proxy, follow_redirects=True
-        ) as session:
-            resp = await session.get(source)
-            if resp.status_code >= 400:
-                return ""
+    if not url:
+        return ""
 
-            if host in ["danbooru.donmai.us", "gelbooru.com"]:
-                source = PyQuery(resp.text)(".image-container").attr(
-                    "data-normalized-source"
-                )
+    _url = get_valid_url(url)
+    if not _url:
+        return ""
 
-            elif host in ["yande.re", "konachan.com"]:
-                source = PyQuery(resp.text)("#post_source").attr("value")
-                if not source:
-                    source = PyQuery(resp.text)('a[href^="/pool/show/"]').text()
+    host = _url.host
+    headers = None if host == "danbooru.donmai.us" else DEFAULT_HEADERS
+    async with AsyncClient(
+        headers=headers, proxies=config.proxy, follow_redirects=True
+    ) as session:
+        resp = await session.get(url)
+        if resp.status_code >= 400:
+            return ""
 
-    return handle_source(source) if (source and URL(source).host) else (source or "")
+        source = parse_source(resp.text, host)
+        if source and get_valid_url(source):
+            return handle_source(source)
+
+    return source or ""
 
 
 def get_website_mark(href: str) -> str:
-    host = URL(href).host
-    if not host:
+    url = get_valid_url(href)
+    if not url:
         return href
+    host = url.host
     if "danbooru" in host:
         return "danbooru"
     elif "seiga" in host:
@@ -215,3 +227,13 @@ def filter_results_with_ratio(
         return filtered
 
     return [i[0] for i in raw_with_ratio]
+
+
+def get_valid_url(url: str) -> Optional[URL]:
+    try:
+        url = URL(url)
+        if url.host:
+            return url
+    except InvalidURL:
+        return None
+    return None

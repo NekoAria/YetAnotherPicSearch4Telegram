@@ -1,8 +1,14 @@
-from httpx import URL, AsyncClient
+from httpx import AsyncClient
 from PicImageSearch import Iqdb
 
 from . import SEARCH_RESULT_TYPE, bot
-from .utils import async_lock, get_bytes_by_url, get_hyperlink, get_source
+from .utils import (
+    async_lock,
+    get_bytes_by_url,
+    get_hyperlink,
+    get_source,
+    get_valid_url,
+)
 
 
 @async_lock()
@@ -28,7 +34,7 @@ async def iqdb_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
 
     source = await get_source(selected_res.url)
     if source:
-        if URL(source).host:
+        if get_valid_url(source):
             source = get_hyperlink(source)
         source = f"Source: {source}"
     res_list = [

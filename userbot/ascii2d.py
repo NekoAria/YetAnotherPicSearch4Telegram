@@ -1,11 +1,17 @@
 from typing import List, Tuple
 
-from httpx import URL, AsyncClient
+from httpx import AsyncClient
 from PicImageSearch import Ascii2D
 from PicImageSearch.model import Ascii2DItem, Ascii2DResponse
 
 from . import SEARCH_RESULT_TYPE
-from .utils import async_lock, get_bytes_by_url, get_hyperlink, get_website_mark
+from .utils import (
+    async_lock,
+    get_bytes_by_url,
+    get_hyperlink,
+    get_valid_url,
+    get_website_mark,
+)
 
 
 @async_lock()
@@ -36,7 +42,7 @@ async def extract_title_and_source_info(raw: Ascii2DItem) -> Tuple[str, str]:
         else:
             source = "  ".join([get_hyperlink(*i) for i in raw.url_list])
 
-    if title and URL(title).host:
+    if title and get_valid_url(title):
         title = get_hyperlink(title)
 
     return title, source
