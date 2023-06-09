@@ -19,11 +19,15 @@
 
 目前支持的搜图服务：
 
-- [saucenao](https://saucenao.com)
-- [ascii2d](https://ascii2d.net)
-- [iqdb](https://iqdb.org)
-- [exhentai](https://exhentai.org)
-- [whatanime](https://trace.moe)
+- [Ascii2D](https://ascii2d.net/)
+- [Baidu](https://graph.baidu.com/)
+- [E-Hentai](https://e-hentai.org/)
+- [ExHentai](https://exhentai.org/)
+- [Google](https://www.google.com/imghp)
+- [Iqdb](https://iqdb.org/)
+- [SauceNAO](https://saucenao.com/)
+- [TraceMoe](https://trace.moe/)
+- [Yandex](https://yandex.com/images/search)
 
 支持私聊/群组/频道。
 

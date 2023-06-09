@@ -18,6 +18,7 @@ from tenacity import retry, stop_after_attempt, stop_after_delay
 
 from .. import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
 from ..ascii2d import ascii2d_search
+from ..baidu import baidu_search
 from ..config import config
 from ..ehentai import ehentai_search
 from ..google import google_search
@@ -37,6 +38,7 @@ search_buttons = [
         Button.inline("SauceNAO"),
     ],
     [
+        Button.inline("Baidu"),
         Button.inline("Google"),
         Button.inline("Yandex"),
     ],
@@ -235,6 +237,7 @@ async def handle_search_mode(
 ) -> SEARCH_RESULT_TYPE:
     search_function_dict: Dict[bytes, SEARCH_FUNCTION_TYPE] = {
         b"Ascii2D": ascii2d_search,
+        b"Baidu": baidu_search,
         b"EHentai": ehentai_search,
         b"Google": google_search,
         b"Iqdb": iqdb_search,
