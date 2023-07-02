@@ -1,5 +1,4 @@
 from asyncio import TimeoutError
-from functools import reduce
 from itertools import takewhile
 from typing import Dict, List, Optional, Union
 
@@ -24,7 +23,7 @@ from ..ehentai import ehentai_search
 from ..google import google_search
 from ..iqdb import iqdb_search
 from ..saucenao import saucenao_search
-from ..utils import async_cached, get_first_frame_from_video
+from ..utils import async_cached, get_first_frame_from_video, remove_button
 from ..whatanime import whatanime_search
 from ..yandex import yandex_search
 
@@ -145,12 +144,7 @@ async def handle_message_event(
 @bot.on(CallbackQuery(func=lambda e: e.is_private))  # type: ignore
 async def handle_search(event: events.CallbackQuery.Event) -> None:
     reply_to_msg: Message = await event.get_message()
-    buttons = [
-        i
-        for i in reduce(lambda x, y: x + y, reply_to_msg.buttons)
-        if i.data != event.data
-    ]
-    buttons = [buttons[i : i + 2] for i in range(0, len(buttons), 2)]
+    buttons = remove_button(reply_to_msg.buttons, event.data)
     # 奇怪的 BUG ：有时候会间隔 N 秒连续触发同一个按钮的点击事件
     try:
         await reply_to_msg.edit(text="正在进行搜索，请稍候", buttons=None)

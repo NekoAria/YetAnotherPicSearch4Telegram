@@ -21,6 +21,7 @@ from cachetools.keys import hashkey
 from httpx import URL, AsyncClient, InvalidURL
 from PicImageSearch.model.ehentai import EHentaiItem, EHentaiResponse
 from pyquery import PyQuery
+from telethon.tl.custom import MessageButton
 
 from .config import config
 from .nhentai_model import NHentaiItem, NHentaiResponse
@@ -59,15 +60,19 @@ def handle_source(source: str) -> str:
     )
 
 
-def parse_source(resp_text: str, host: str) -> Optional[str]:
-    if host in ["danbooru.donmai.us", "gelbooru.com"]:
-        return PyQuery(resp_text)(".image-container").attr("data-normalized-source")
+def parse_source(resp_text: str, host: str) -> str:
+    doc = PyQuery(resp_text)
+    source: Optional[str] = None
 
-    elif host in ["yande.re", "konachan.com"]:
-        source = PyQuery(resp_text)("#post_source").attr("value")
-        return source or PyQuery(resp_text)('a[href^="/pool/show/"]').text()
+    if host in {"danbooru.donmai.us", "gelbooru.com"}:
+        source = doc(".image-container").attr("data-normalized-source")
 
-    return ""
+    elif host in {"yande.re", "konachan.com"}:
+        source = (
+            doc("#post_source").attr("value") or doc('a[href^="/pool/show/"]').text()
+        )
+
+    return source or ""
 
 
 async def get_source(url: str) -> str:
@@ -229,11 +234,24 @@ def filter_results_with_ratio(
     return [i[0] for i in raw_with_ratio]
 
 
-def get_valid_url(url: str) -> Optional[URL]:
+def get_valid_url(url_str: str) -> Optional[URL]:
     try:
-        url = URL(url)
+        url = URL(url_str)
         if url.host:
             return url
     except InvalidURL:
         return None
     return None
+
+
+def remove_button(
+    buttons: List[List[MessageButton]], button_data: bytes
+) -> Optional[List[List[MessageButton]]]:
+    for row in buttons:
+        for index, button in enumerate(row):
+            if button.data == button_data:
+                row.pop(index)
+                if len(row) == 0:
+                    buttons.remove(row)
+                return buttons or None
+    return buttons
