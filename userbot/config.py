@@ -1,6 +1,7 @@
 from typing import Any, List, Optional
 
-from pydantic import BaseSettings, validator
+from pydantic import field_validator
+from pydantic_settings import BaseSettings
 
 
 class Config(BaseSettings):
@@ -27,7 +28,7 @@ class Config(BaseSettings):
     # 用来绕过 nhentai cloudflare 拦截的 cookie
     nhentai_cookies: Optional[str] = None
 
-    @validator("token", "owner_id", "saucenao_api_key", pre=True)
+    @field_validator("token", "owner_id", "saucenao_api_key", mode="before")
     def check_required(cls, v: Any) -> Any:
         if not v:
             raise ValueError("token / owner_id / saucenao_api_key are required!")
