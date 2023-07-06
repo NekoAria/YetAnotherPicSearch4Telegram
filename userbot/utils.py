@@ -19,10 +19,13 @@ from typing import (
 import arrow
 from cachetools.keys import hashkey
 from httpx import URL, AsyncClient, InvalidURL
+from loguru import logger
 from PicImageSearch.model.ehentai import EHentaiItem, EHentaiResponse
 from pyquery import PyQuery
+from telethon import events
 from telethon.tl.custom import MessageButton
 
+from . import bot
 from .config import config
 from .nhentai_model import NHentaiItem, NHentaiResponse
 
@@ -255,3 +258,28 @@ def remove_button(
                     buttons.remove(row)
                 return buttons or None
     return buttons
+
+
+def command(
+    pattern: str, owner_only: bool = False, from_users: Optional[List[int]] = None
+) -> Callable[..., Any]:
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @wraps(func)
+        async def wrapper(event: events.NewMessage.Event) -> None:
+            if owner_only and event.sender_id != config.owner_id:
+                return
+            if from_users and event.sender_id not in from_users:
+                return
+
+            try:
+                await func(event)
+            except Exception as e:
+                logger.exception(e)
+                await event.reply(f"E: {repr(e)}")
+
+        bot.add_event_handler(
+            wrapper, events.NewMessage(from_users=from_users, pattern=pattern)
+        )
+        return wrapper
+
+    return decorator

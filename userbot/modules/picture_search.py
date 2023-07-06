@@ -23,7 +23,7 @@ from ..ehentai import ehentai_search
 from ..google import google_search
 from ..iqdb import iqdb_search
 from ..saucenao import saucenao_search
-from ..utils import async_cached, get_first_frame_from_video, remove_button
+from ..utils import async_cached, command, get_first_frame_from_video, remove_button
 from ..whatanime import whatanime_search
 from ..yandex import yandex_search
 
@@ -62,7 +62,7 @@ def check_permission(
     return event.sender_id in allowed_users or event.chat_id in config.allowed_chats
 
 
-@bot.on(events.NewMessage(from_users=allowed_users, pattern="/start"))  # type: ignore
+@command(pattern="/start", from_users=allowed_users)
 async def start(event: events.NewMessage.Event) -> None:
     await event.reply("请发送图片，然后选择搜图模式")
 
