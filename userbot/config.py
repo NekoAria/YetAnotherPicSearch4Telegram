@@ -27,6 +27,9 @@ class Config(BaseSettings):
     nhentai_useragent: Optional[str] = None
     # 用来绕过 nhentai cloudflare 拦截的 cookie
     nhentai_cookies: Optional[str] = None
+    # Preferred language for searching on EHentai / NHentai, such as Chinese or English.
+    # Default selection is the original version.
+    preferred_language: Optional[str] = None
 
     @field_validator("token", "owner_id", "saucenao_api_key", mode="before")
     def check_required(cls, v: Any) -> Any:

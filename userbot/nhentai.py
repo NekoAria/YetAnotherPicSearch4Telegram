@@ -70,11 +70,15 @@ async def search_result_filter(res: NHentaiResponse) -> SEARCH_RESULT_TYPE:
     for i in res.raw:
         await update_nhentai_info(i)
 
-    # 优先找汉化版；没找到就优先找原版
-    if chinese_res := [
-        i for i in res.raw if "translated" in i.tags and "chinese" in i.tags
-    ]:
-        selected_res = chinese_res[0]
+    # 优先找翻译版，没找到就优先找原版
+    if config.preferred_language and (
+        translated_res := [
+            i
+            for i in res.raw
+            if "translated" in i.tags and config.preferred_language.lower() in i.tags
+        ]
+    ):
+        selected_res = translated_res[0]
     elif not_translated_res := [i for i in res.raw if "translated" not in i.tags]:
         selected_res = not_translated_res[0]
     else:

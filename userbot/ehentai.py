@@ -106,13 +106,16 @@ async def search_result_filter(
             if len(res.raw) != len(group_list):
                 res.raw = [i for i in res.raw if i not in group_list]
 
-    # 优先找汉化版；没找到就优先找原版
-    if chinese_res := [
-        i
-        for i in res.raw
-        if "translated" in " ".join(i.tags) and "chinese" in " ".join(i.tags)
-    ]:
-        selected_res = chinese_res[0]
+    # 优先找翻译版，没找到就优先找原版
+    if config.preferred_language and (
+        translated_res := [
+            i
+            for i in res.raw
+            if "translated" in " ".join(i.tags)
+            and config.preferred_language.lower() in " ".join(i.tags)
+        ]
+    ):
+        selected_res = translated_res[0]
     elif not_translated_res := [
         i for i in res.raw if "translated" not in " ".join(i.tags)
     ]:
