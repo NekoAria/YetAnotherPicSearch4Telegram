@@ -1,8 +1,10 @@
+from io import BytesIO
 from typing import List, Tuple
 
 from httpx import AsyncClient
 from PicImageSearch import Ascii2D
 from PicImageSearch.model import Ascii2DItem, Ascii2DResponse
+from PIL import Image
 
 from . import SEARCH_RESULT_TYPE
 from .utils import (
@@ -79,6 +81,13 @@ async def get_final_res(
 
         if not (thumbnail := await get_bytes_by_url(r.thumbnail)):
             continue
+
+        # If thumbnail is in gif format, only take the first frame
+        if thumbnail[:3] == b"GIF":
+            im = Image.open(BytesIO(thumbnail))
+            with BytesIO() as output:
+                im.convert("RGB").save(output, "JPEG")
+                thumbnail = output.getvalue()
 
         title, source = await extract_title_and_source_info(r)
 
