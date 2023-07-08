@@ -169,18 +169,9 @@ async def handle_search(event: events.CallbackQuery.Event) -> None:
                 if not _file:
                     continue
                 result = await handle_search_mode(event.data, _file, client)
-                # 如果媒体文件为视频，就不往回发了
-                if (document := msg.document) and document.mime_type == "video/mp4":
-                    _file = None
                 for caption, __file in result:
                     await send_search_results(
-                        bot,
-                        event.chat_id,
-                        caption,
-                        msg,
-                        file=__file,
-                        extra_file=_file,
-                        buttons=buttons,
+                        bot, event.chat_id, caption, msg, file=__file
                     )
             except Exception as e:
                 logger.exception(e)
@@ -252,8 +243,6 @@ async def send_search_results(
     caption: str,
     reply_to: Message,
     file: Union[List[str], List[bytes], str, bytes, None] = None,
-    extra_file: Union[str, bytes, None] = None,
-    buttons: Optional[List[List[Button]]] = None,
 ) -> None:
     if send_to != config.owner_id and "已收藏" in caption:
         caption = caption.replace("❤️ 已收藏\n", "")
@@ -267,17 +256,4 @@ async def send_search_results(
             )
             await _bot.send_file(send_to, file=file, reply_to=reply_to)
     else:
-        if "使用次数" in caption:
-            buttons = None
-        if extra_file:
-            await _bot.send_file(
-                send_to,
-                file=extra_file,
-                caption=caption,
-                reply_to=reply_to,
-                buttons=buttons,
-            )
-        else:
-            await _bot.send_message(
-                send_to, caption, reply_to=reply_to, link_preview=False
-            )
+        await _bot.send_message(send_to, caption, reply_to=reply_to, link_preview=False)
