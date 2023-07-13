@@ -4,6 +4,7 @@ from collections import defaultdict
 from contextlib import suppress
 from difflib import SequenceMatcher
 from functools import update_wrapper, wraps
+from io import BytesIO
 from typing import (
     Any,
     Callable,
@@ -21,9 +22,11 @@ from cachetools.keys import hashkey
 from httpx import URL, AsyncClient, InvalidURL
 from loguru import logger
 from PicImageSearch.model.ehentai import EHentaiItem, EHentaiResponse
+from PIL import Image
 from pyquery import PyQuery
 from telethon import events
 from telethon.tl.custom import MessageButton
+from tenacity import TryAgain, retry, stop_after_attempt, stop_after_delay
 
 from . import bot
 from .config import config
@@ -39,17 +42,31 @@ DEFAULT_HEADERS = {
 }
 
 
+@retry(stop=(stop_after_attempt(3) | stop_after_delay(30)), reraise=True)
 async def get_bytes_by_url(url: str, cookies: Optional[str] = None) -> Optional[bytes]:
+    _url = URL(url)
+    referer = f"{_url.scheme}://{_url.host}/"
+    headers = {"Referer": referer, **DEFAULT_HEADERS}
     async with AsyncClient(
-        headers=DEFAULT_HEADERS,
+        headers=headers,
         cookies=parse_cookies(cookies),
         proxies=config.proxy,
         follow_redirects=True,
     ) as session:
         resp = await session.get(url)
-        if resp.status_code < 400:
-            return resp.content
-    return None
+        if resp.status_code == 404:
+            return None
+
+        if resp.status_code >= 400 or len(resp.content) == 0:
+            raise TryAgain
+
+        im = Image.open(BytesIO(resp.content))
+        if im.format == "WEBP":
+            with BytesIO() as output:
+                im.save(output, "PNG")
+                return output.getvalue()
+
+        return resp.content
 
 
 def handle_source(source: str) -> str:
