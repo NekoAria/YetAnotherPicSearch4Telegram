@@ -4,6 +4,7 @@ from typing import List, Tuple
 from httpx import AsyncClient
 from PicImageSearch import Ascii2D
 from PicImageSearch.model import Ascii2DItem, Ascii2DResponse
+from PicImageSearch.model.ascii2d import SUPPORTED_SOURCES, URL
 from PIL import Image
 
 from . import SEARCH_RESULT_TYPE
@@ -36,13 +37,15 @@ async def extract_title_and_source_info(raw: Ascii2DItem) -> Tuple[str, str]:
     title = raw.title
 
     if raw.url_list:
-        if title == raw.url_list[0][1]:
+        if title == raw.url_list[0].text:
             title = ""
         if raw.author:
             source_list = build_source_list(raw.url_list)
             source = "\n".join(source_list)
         else:
-            source = "  ".join([get_hyperlink(*i) for i in raw.url_list])
+            source = "  ".join(
+                [get_hyperlink(url.href, url.text) for url in raw.url_list]
+            )
 
     if title and get_valid_url(title):
         title = get_hyperlink(title)
@@ -50,20 +53,19 @@ async def extract_title_and_source_info(raw: Ascii2DItem) -> Tuple[str, str]:
     return title, source
 
 
-def build_source_list(url_list: List[Tuple[str, str]]) -> List[str]:
-    if len(url_list) % 2 == 1:
-        url_list, extra = url_list[:-1], url_list[-1]
-    else:
-        extra = None
-
-    source_list = [
-        f"[{get_website_mark(b[0])}] {get_hyperlink(*a)} - {get_hyperlink(*b)}"
-        for a, b in [url_list[i : i + 2] for i in range(0, len(url_list), 2)]
-    ]
-
-    if extra:
-        source_list.append(get_hyperlink(*extra))
-
+def build_source_list(url_list: List[URL]) -> List[str]:
+    source_list = []
+    for index in range(0, len(source_list), 2):
+        url = url_list[index]
+        if any(source in url.href for source in SUPPORTED_SOURCES):
+            source_list.append(
+                f"[{get_website_mark(url.href)}]"
+                f" {get_hyperlink(url.href, url.text)} -"
+                f" {get_hyperlink(url_list[index + 1].href, url_list[index + 1].text)}"
+            )
+            continue
+        else:
+            source_list.append(get_hyperlink(url.href, url.text))
     return source_list
 
 
