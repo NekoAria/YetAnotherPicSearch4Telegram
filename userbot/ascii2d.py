@@ -4,7 +4,7 @@ from typing import List, Tuple
 from httpx import AsyncClient
 from PicImageSearch import Ascii2D
 from PicImageSearch.model import Ascii2DItem, Ascii2DResponse
-from PicImageSearch.model.ascii2d import SUPPORTED_SOURCES, URL
+from PicImageSearch.model.ascii2d import URL
 from PIL import Image
 
 from . import SEARCH_RESULT_TYPE
@@ -15,6 +15,8 @@ from .utils import (
     get_valid_url,
     get_website_mark,
 )
+
+SUPPORTED_SOURCES = ["pixiv", "twitter", "fanbox", "fantia", "seiga", "nijie"]
 
 
 @async_lock()
@@ -55,7 +57,7 @@ async def extract_title_and_source_info(raw: Ascii2DItem) -> Tuple[str, str]:
 
 def build_source_list(url_list: List[URL]) -> List[str]:
     source_list = []
-    for index in range(0, len(source_list), 2):
+    for index in range(0, len(url_list), 2):
         url = url_list[index]
         if any(source in url.href for source in SUPPORTED_SOURCES):
             source_list.append(
