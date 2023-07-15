@@ -5,8 +5,8 @@ loguru~=0.7.0
 lxml~=4.9.3
 PicImageSearch~=3.9.4
 Pillow~=10.0.0
-pydantic[dotenv]~=2.0.2
-pydantic-settings~=2.0.1
+pydantic[dotenv]~=2.0.3
+pydantic-settings~=2.0.2
 pyquery~=2.0.0
 python-socks[asyncio]~=2.3.0;extra == "socks"
 socksio~=1.0.0;extra == "socks"
