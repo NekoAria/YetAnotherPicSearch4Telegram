@@ -8,12 +8,16 @@ from httpx import AsyncClient
 from loguru import logger
 from PicImageSearch import Network
 from telethon import TelegramClient, events
-from telethon.errors import MediaCaptionTooLongError, MessageNotModifiedError
+from telethon.errors import (
+    ImageProcessFailedError,
+    MediaCaptionTooLongError,
+    MessageNotModifiedError,
+)
 from telethon.events import CallbackQuery
 from telethon.hints import EntityLike
 from telethon.tl.custom import Button
 from telethon.tl.patched import Message
-from tenacity import retry, stop_after_attempt, stop_after_delay
+from tenacity import TryAgain, retry, stop_after_attempt, stop_after_delay
 
 from .. import SEARCH_FUNCTION_TYPE, SEARCH_RESULT_TYPE, bot
 from ..ascii2d import ascii2d_search
@@ -237,6 +241,7 @@ async def handle_search_mode(
     return await search_function(file, client)
 
 
+@retry(stop=(stop_after_attempt(3) | stop_after_delay(30)), reraise=True)
 async def send_search_results(
     _bot: TelegramClient,
     send_to: int,
@@ -255,5 +260,7 @@ async def send_search_results(
                 send_to, caption, reply_to=reply_to, link_preview=False
             )
             await _bot.send_file(send_to, file=file, reply_to=reply_to)
+        except ImageProcessFailedError:
+            raise TryAgain
     else:
         await _bot.send_message(send_to, caption, reply_to=reply_to, link_preview=False)
