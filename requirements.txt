@@ -5,10 +5,10 @@ loguru~=0.7.0
 lxml~=4.9.3
 PicImageSearch~=3.9.5
 Pillow~=10.0.0
-pydantic[dotenv]~=2.0.3
+pydantic[dotenv]~=2.1.1
 pydantic-settings~=2.0.2
 pyquery~=2.0.0
 python-socks[asyncio]~=2.3.0;extra == "socks"
 socksio~=1.0.0;extra == "socks"
-Telethon~=1.29.1
+Telethon~=1.29.2
 tenacity~=8.2.2
