@@ -10,5 +10,5 @@ pydantic-settings~=2.0.3
 pyquery~=2.0.0
 python-socks[asyncio]~=2.4.3;extra == "socks"
 socksio~=1.0.0;extra == "socks"
-Telethon~=1.31.0
+Telethon~=1.31.1
 tenacity~=8.2.3
