@@ -19,7 +19,7 @@ cachetools = "^5.3.2"
 httpx = "^0.25.2"
 loguru = "^0.7.2"
 lxml = "^4.9.3"
-PicImageSearch = "^3.9.6"
+PicImageSearch = "^3.9.7"
 Pillow = "^10.1.0"
 pydantic = {extras = ["dotenv"], version = "^2.5.2"}
 pydantic-settings = "^2.1.0"
