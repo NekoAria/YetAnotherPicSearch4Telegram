@@ -1,13 +1,9 @@
-minimum_pre_commit_version: "3.2.0"
+minimum_pre_commit_version: "3.5.0"
 files: ^.*\.py$
 repos:
   - repo: https://github.com/charliermarsh/ruff-pre-commit
-    rev: 'v0.0.257'
+    rev: "v0.11.13"
     hooks:
       - id: ruff
-        args:
-          - --fix
-  - repo: https://github.com/psf/black
-    rev: 23.1.0
-    hooks:
-      - id: black
+        args: [--fix]
+      - id: ruff-format

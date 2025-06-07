@@ -7,11 +7,11 @@ from . import SEARCH_RESULT_TYPE
 from .config import config
 from .nhentai_model import NHentaiItem, NHentaiResponse
 from .utils import (
-    filter_results_with_ratio,
     get_bytes_by_url,
     get_hyperlink,
     parse_cookies,
     preprocess_search_query,
+    sort_results_with_ratio,
 )
 
 NHENTAI_HEADERS = (
@@ -25,38 +25,27 @@ NHENTAI_COOKIES = parse_cookies(config.nhentai_cookies)
 
 
 async def update_nhentai_info(item: NHentaiItem) -> None:
-    async with AsyncClient(
-        headers=NHENTAI_HEADERS, cookies=NHENTAI_COOKIES, proxies=config.proxy
-    ) as session:
+    async with AsyncClient(headers=NHENTAI_HEADERS, cookies=NHENTAI_COOKIES, proxy=config.proxy) as session:
         resp = await session.get(item.url)
         uft8_parser = HTMLParser(encoding="utf-8")
         data = PyQuery(fromstring(resp.text, parser=uft8_parser))
         item.origin = data
-        item.title = (
-            data.find("h2.title").text()
-            if data.find("h2.title")
-            else data.find("h1.title").text()
-        )
+        item.title = data.find("h2.title").text() if data.find("h2.title") else data.find("h1.title").text()
         item.type = data.find('#tags a[href^="/category/"] .name').text()
         item.date = data.find("#tags time").attr("datetime")
-        item.tags = [
-            i.text()
-            for i in data.find('#tags a:not([href*="/search/?q=pages"]) .name').items()
-        ]
+        item.tags = [i.text() for i in data.find('#tags a:not([href*="/search/?q=pages"]) .name').items()]
 
 
 async def nhentai_title_search(title: str) -> SEARCH_RESULT_TYPE:
     query = preprocess_search_query(title)
     url = "https://nhentai.net/search/"
     params = {"q": query}
-    async with AsyncClient(
-        headers=NHENTAI_HEADERS, cookies=NHENTAI_COOKIES, proxies=config.proxy
-    ) as session:
+    async with AsyncClient(headers=NHENTAI_HEADERS, cookies=NHENTAI_COOKIES, proxy=config.proxy) as session:
         resp = await session.get(url, params=params)
         if res := NHentaiResponse(resp.text, str(resp.url)):
-            # 只保留标题和搜索关键词相关度较高的结果，并排序，以此来提高准确度
+            # 按搜索关键词相关度排序，相关度越高，结果越靠前
             if res.raw:
-                res.raw = filter_results_with_ratio(res, title)
+                res.raw = sort_results_with_ratio(res, title)
             return await search_result_filter(res)
 
         return [("NHentai 暂时无法使用", None)]
@@ -72,11 +61,7 @@ async def search_result_filter(res: NHentaiResponse) -> SEARCH_RESULT_TYPE:
 
     # 优先找翻译版，没找到就优先找原版
     if config.preferred_language and (
-        translated_res := [
-            i
-            for i in res.raw
-            if "translated" in i.tags and config.preferred_language.lower() in i.tags
-        ]
+        translated_res := [i for i in res.raw if "translated" in i.tags and config.preferred_language.lower() in i.tags]
     ):
         selected_res = translated_res[0]
     elif not_translated_res := [i for i in res.raw if "translated" not in i.tags]:

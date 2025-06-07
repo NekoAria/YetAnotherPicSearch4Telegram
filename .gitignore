@@ -257,3 +257,6 @@ cython_debug/
 
 # Telethon sessions
 *.session
+
+# VSCode
+.vscode

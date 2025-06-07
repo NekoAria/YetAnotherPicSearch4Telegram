@@ -1,1 +1,1 @@
-python -m userbot
+python -m bot

@@ -1,7 +1,7 @@
 from httpx import AsyncClient
 from PicImageSearch import Iqdb
 
-from . import SEARCH_RESULT_TYPE, bot
+from . import SEARCH_RESULT_TYPE
 from .utils import (
     async_lock,
     get_bytes_by_url,
@@ -43,10 +43,7 @@ async def iqdb_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TYPE:
         source,
         f"Via: {get_hyperlink(res.url)}",
     ]
-    if _thumbnail := await get_bytes_by_url(selected_res.thumbnail):
-        thumbnail = await bot.upload_file(_thumbnail, file_name="image.jpg")
-    else:
-        thumbnail = None
+    thumbnail = await get_bytes_by_url(selected_res.thumbnail)
     final_res.append(("\n".join([i for i in res_list if i]), thumbnail))
 
     return final_res

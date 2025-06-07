@@ -1,6 +1,7 @@
 import asyncio
 import re
 from collections import defaultdict
+from collections.abc import Coroutine
 from contextlib import suppress
 from difflib import SequenceMatcher
 from functools import update_wrapper, wraps
@@ -8,21 +9,25 @@ from io import BytesIO
 from typing import (
     Any,
     Callable,
-    Coroutine,
-    DefaultDict,
-    Dict,
-    List,
     Optional,
     TypeVar,
     Union,
 )
 
 import arrow
+import imageio.v3 as iio
 from cachetools.keys import hashkey
-from httpx import URL, AsyncClient, InvalidURL
+from httpx import (
+    URL,
+    AsyncClient,
+    ConnectError,
+    ConnectTimeout,
+    ReadTimeout,
+    UnsupportedProtocol,
+)
 from loguru import logger
-from PicImageSearch.model.ehentai import EHentaiItem, EHentaiResponse
-from PIL import Image
+from PicImageSearch.model import EHentaiItem, EHentaiResponse
+from PIL import Image, UnidentifiedImageError
 from pyquery import PyQuery
 from telethon import events
 from telethon.tl.custom import MessageButton
@@ -33,6 +38,7 @@ from .config import config
 from .nhentai_model import NHentaiItem, NHentaiResponse
 
 T = TypeVar("T")
+SEPARATOR = "\n" + "-" * 22 + "\n"
 DEFAULT_HEADERS = {
     "User-Agent": (
         "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -46,22 +52,48 @@ DEFAULT_HEADERS = {
 async def get_bytes_by_url(url: str, cookies: Optional[str] = None) -> Optional[bytes]:
     _url = URL(url)
     referer = f"{_url.scheme}://{_url.host}/"
-    headers = {"Referer": referer, **DEFAULT_HEADERS}
+    headers = (
+        {"Referer": referer, **DEFAULT_HEADERS}
+        if _url.host != "cdn.donmai.us"
+        else {"User-Agent": "python-httpx/0.28.2"}
+    )
     async with AsyncClient(
         headers=headers,
         cookies=parse_cookies(cookies),
-        proxies=config.proxy,
+        proxy=config.proxy,
         follow_redirects=True,
     ) as session:
-        resp = await session.get(url)
-        if resp.status_code == 404:
+        try:
+            resp = await session.get(url)
+        except (ConnectError, UnsupportedProtocol):
+            return None
+        except (ConnectTimeout, ReadTimeout):
+            logger.warning(f"Timeout occurred for URL: {url}")
+            return None
+        except Exception as e:
+            logger.error(f"HTTP error occurred: {e}")
+            logger.error(f"Error type: {type(e).__name__}")
+            logger.info(f"URL: {url}")
             return None
 
-        if resp.status_code >= 400 or len(resp.content) == 0:
+        if resp.status_code in {429, 500, 503}:
             raise TryAgain
 
-        im = Image.open(BytesIO(resp.content))
-        if im.format == "WEBP":
+        if resp.status_code >= 400:
+            if resp.status_code != 404:
+                logger.warning(f"Failed request with status code {resp.status_code} for URL: {url}")
+            return None
+
+        if len(resp.content) == 0:
+            logger.warning(f"No content returned for URL: {url}")
+            return None
+
+        try:
+            im = Image.open(BytesIO(resp.content))
+        except UnidentifiedImageError:
+            return resp.content
+
+        if im.format in {"BMP", "WEBP"}:
             with BytesIO() as output:
                 im.save(output, "PNG")
                 return output.getvalue()
@@ -88,9 +120,7 @@ def parse_source(resp_text: str, host: str) -> str:
         source = doc(".image-container").attr("data-normalized-source")
 
     elif host in {"yande.re", "konachan.com"}:
-        source = (
-            doc("#post_source").attr("value") or doc('a[href^="/pool/show/"]').text()
-        )
+        source = doc("#post_source").attr("value") or doc('a[href^="/pool/show/"]').text()
 
     return source or ""
 
@@ -104,10 +134,8 @@ async def get_source(url: str) -> str:
         return ""
 
     host = _url.host
-    headers = None if host == "danbooru.donmai.us" else DEFAULT_HEADERS
-    async with AsyncClient(
-        headers=headers, proxies=config.proxy, follow_redirects=True
-    ) as session:
+    headers = {"User-Agent": "python-httpx/0.28.2"} if host == "danbooru.donmai.us" else DEFAULT_HEADERS
+    async with AsyncClient(headers=headers, proxy=config.proxy, follow_redirects=True) as session:
         resp = await session.get(url)
         if resp.status_code >= 400:
             return ""
@@ -120,10 +148,13 @@ async def get_source(url: str) -> str:
 
 
 def get_website_mark(href: str) -> str:
-    url = get_valid_url(href)
-    if not url:
+    if url := get_valid_url(href):
+        host = url.host
+    elif host_match := re.search(r"https?://([^/]+)/", href):
+        host = host_match[0]
+    else:
         return href
-    host = url.host
+
     if "danbooru" in host:
         return "danbooru"
     elif "seiga" in host:
@@ -138,27 +169,12 @@ def get_hyperlink(href: str, text: Optional[str] = None) -> str:
     return href if text == href else f"<a href={href}>{text}</a>"
 
 
-async def get_first_frame_from_video(video: bytes) -> Optional[bytes]:
-    async with AsyncClient(
-        headers=DEFAULT_HEADERS, proxies=config.proxy, follow_redirects=True
-    ) as session:
-        resp = await session.post("https://file.io", files={"file": video})
-        link = resp.json()["link"]
-        resp = await session.get("https://ezgif.com/video-to-jpg", params={"url": link})
-        d = PyQuery(resp.text)
-        next_url = d("form").attr("action")
-        _file = d("form > input[type=hidden]").attr("value")
-        data = {
-            "file": _file,
-            "start": "0",
-            "end": "1",
-            "size": "original",
-            "fps": "10",
-        }
-        resp = await session.post(next_url, params={"ajax": "true"}, data=data)
-        d = PyQuery(resp.text)
-        first_frame_img_url = "https:" + d("img:nth-child(1)").attr("src")
-        return await get_bytes_by_url(first_frame_img_url)
+def get_first_frame_from_video(video: bytes) -> bytes:
+    frame = iio.imread(video, index=0, plugin="pyav")
+    im = Image.fromarray(frame)
+    with BytesIO() as output:
+        im.save(output, "JPEG")
+        return output.getvalue()
 
 
 def async_cached(cache, key=hashkey):  # type: ignore
@@ -188,8 +204,8 @@ def async_cached(cache, key=hashkey):  # type: ignore
     return decorator
 
 
-def parse_cookies(cookies_str: Optional[str] = None) -> Dict[str, str]:
-    cookies_dict: Dict[str, str] = {}
+def parse_cookies(cookies_str: Optional[str] = None) -> dict[str, str]:
+    cookies_dict: dict[str, str] = {}
     if cookies_str:
         for line in cookies_str.split(";"):
             key, value = line.strip().split("=", 1)
@@ -199,16 +215,12 @@ def parse_cookies(cookies_str: Optional[str] = None) -> Dict[str, str]:
 
 def async_lock(
     freq: float = 1,
-) -> Callable[
-    [Callable[..., Coroutine[Any, Any, T]]], Callable[..., Coroutine[Any, Any, T]]
-]:
+) -> Callable[[Callable[..., Coroutine[Any, Any, T]]], Callable[..., Coroutine[Any, Any, T]]]:
     def decorator(
-        func: Callable[..., Coroutine[Any, Any, T]]
+        func: Callable[..., Coroutine[Any, Any, T]],
     ) -> Callable[..., Coroutine[Any, Any, T]]:
-        locks: DefaultDict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
-        call_times: DefaultDict[str, arrow.Arrow] = defaultdict(
-            lambda: arrow.now().shift(seconds=-freq)
-        )
+        locks: defaultdict[str, asyncio.Lock] = defaultdict(asyncio.Lock)
+        call_times: defaultdict[str, arrow.Arrow] = defaultdict(lambda: arrow.now().shift(seconds=-freq))
 
         @wraps(func)
         async def wrapper(*args: Any, **kwargs: Any) -> T:
@@ -226,30 +238,86 @@ def async_lock(
     return decorator
 
 
+def remove_surrounding_hyphens(text):
+    # 查找被连字符包围的内容
+    matches = re.finditer(r"(?<!\S)-(.+?)-(?!\S)", text)
+
+    for match in matches:
+        extracted_content = match.group(1)
+        start, end = match.span()
+
+        # 确保内部没有其他连字符
+        if "-" not in extracted_content:
+            # 在原字符串中去掉外围的连字符
+            text = text[:start] + extracted_content + text[end:]
+
+    return text
+
+
 def preprocess_search_query(query: str) -> str:
-    query = re.sub(r"●|・|~|～|〜|、|×|:::|\s+-\s+|\[中国翻訳]", " ", query)
-    # 去除独立的英文、日文、中文字符，但不去除带连字符的
-    for i in [
-        r"\b[A-Za-z]\b",
-        r"\b[\u4e00-\u9fff]\b",
-        r"\b[\u3040-\u309f\u30a0-\u30ff]\b",
-    ]:
-        query = re.sub(rf"(?<!-){i}(?!-)", "", query)
+    # 去除外围的连字符
+    query = remove_surrounding_hyphens(query)
+    query = re.sub(r"(vol|no) (\d+)", r"\1.\2", query, flags=re.IGNORECASE)
+    # 替换心形符号为空格
+    query = query.replace("♥️", " ")
+    # 移除数字相关的内容
+    query = re.sub(r"\(C\d+\)", "", query)
+    query = re.sub(r"(\S+)x\d+", r"\1", query)
+    # query = re.sub(r"\s\d+(\s+)?$", "", query)
+    # 移除特殊符号和不需要的文本
+    to_remove_patterns = [
+        "─",
+        "－",
+        "~",
+        "〜",
+        "～",
+        "!",
+        "！",
+        "・",
+        "♢",
+        "◇",
+        "○",
+        "●",
+        "〇",
+        "、",
+        ":::",
+        "「|」",
+        "（|）",
+        "＜|＞",
+        r"\(|\)",
+        r"\[|\]",
+        # r"#\d+",
+        r"\d+%",
+        r"\s+-\s+",
+        "[^([]+翻訳",
+        "オリジナル",
+        "同人誌",
+        "成年コミック",
+        "雑誌",
+        "DL版",
+        "ダウンロード版",
+        "デジタル版",
+    ]
+    query = re.sub("|".join(to_remove_patterns), " ", query)
+
+    # 移除孤立的字母和字符
+    isolated_chars = [
+        r"\b[A-Za-z]\b",  # 英文
+        r"\b[\u4e00-\u9fff]\b",  # 中文
+        r"\b[\u0400-\u04ff]\b",  # 西里尔字母
+        r"\b[\u3040-\u309f\u30a0-\u30ff]\b",  # 日文
+    ]
+    for pattern in isolated_chars:
+        query = re.sub(rf"(?<!-){pattern}(?!-)", "", query)
 
     return query.strip()
 
 
-def filter_results_with_ratio(
+def sort_results_with_ratio(
     res: Union[EHentaiResponse, NHentaiResponse], title: str
-) -> Union[List[EHentaiItem], List[NHentaiItem]]:
-    raw_with_ratio = [
-        (i, SequenceMatcher(lambda x: x == " ", title, i.title).ratio())
-        for i in res.raw
-    ]
+) -> Union[list[EHentaiItem], list[NHentaiItem]]:
+    raw_with_ratio = [(i, SequenceMatcher(lambda x: x == " ", title, i.title).ratio()) for i in res.raw]
     raw_with_ratio.sort(key=lambda x: x[1], reverse=True)
-
-    if filtered := [i[0] for i in raw_with_ratio if i[1] > 0.65]:
-        return filtered
 
     return [i[0] for i in raw_with_ratio]
 
@@ -259,14 +327,12 @@ def get_valid_url(url_str: str) -> Optional[URL]:
         url = URL(url_str)
         if url.host:
             return url
-    except InvalidURL:
+    except Exception:
         return None
     return None
 
 
-def remove_button(
-    buttons: List[List[MessageButton]], button_data: bytes
-) -> Optional[List[List[MessageButton]]]:
+def remove_button(buttons: list[list[MessageButton]], button_data: bytes) -> Optional[list[list[MessageButton]]]:
     for row in buttons:
         for index, button in enumerate(row):
             if button.data == button_data:
@@ -277,9 +343,7 @@ def remove_button(
     return buttons
 
 
-def command(
-    pattern: str, owner_only: bool = False, from_users: Optional[List[int]] = None
-) -> Callable[..., Any]:
+def command(pattern: str, owner_only: bool = False, from_users: Optional[list[int]] = None) -> Callable[..., Any]:
     def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
         @wraps(func)
         async def wrapper(event: events.NewMessage.Event) -> None:
@@ -294,9 +358,7 @@ def command(
                 logger.exception(e)
                 await event.reply(f"E: {repr(e)}")
 
-        bot.add_event_handler(
-            wrapper, events.NewMessage(from_users=from_users, pattern=pattern)
-        )
+        bot.add_event_handler(wrapper, events.NewMessage(from_users=from_users, pattern=pattern))
         return wrapper
 
     return decorator

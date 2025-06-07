@@ -1,5 +1,3 @@
-from typing import List
-
 from lxml.html import HTMLParser, fromstring
 from pyquery import PyQuery
 
@@ -13,7 +11,7 @@ class NHentaiItem:
         self.thumbnail: str = cover.find("img").attr("data-src")
         self.type: str = ""
         self.date: str = ""
-        self.tags: List[str] = []
+        self.tags: list[str] = []
 
 
 class NHentaiResponse:
@@ -21,7 +19,7 @@ class NHentaiResponse:
         self.origin: str = resp_text  # 原始数据
         uft8_parser = HTMLParser(encoding="utf-8")
         data = PyQuery(fromstring(self.origin, parser=uft8_parser))
-        self.raw: List[NHentaiItem] = [
+        self.raw: list[NHentaiItem] = [
             NHentaiItem(i) for i in data.find(".gallery").items()
         ]
         self.url: str = resp_url

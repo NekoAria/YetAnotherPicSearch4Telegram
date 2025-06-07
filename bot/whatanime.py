@@ -1,5 +1,5 @@
 import math
-from typing import Any, Dict
+from typing import Any
 
 from httpx import AsyncClient
 from PicImageSearch import TraceMoe
@@ -44,5 +44,5 @@ async def whatanime_search(file: bytes, client: AsyncClient) -> SEARCH_RESULT_TY
     return [("WhatAnime 暂时无法使用", None)]
 
 
-def date_to_str(date: Dict[str, Any]) -> str:
+def date_to_str(date: dict[str, Any]) -> str:
     return f"{date['year']}-{date['month']}-{date['day']}"

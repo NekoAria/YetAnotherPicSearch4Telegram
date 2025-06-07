@@ -1,7 +1,4 @@
-from typing import List
-
-
-def __list_all_modules() -> List[str]:
+def __list_all_modules() -> list[str]:
     from pathlib import Path
 
     module_paths = list(Path(__file__).parent.glob("*.py"))

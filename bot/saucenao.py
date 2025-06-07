@@ -4,7 +4,7 @@ from httpx import AsyncClient
 from PicImageSearch import SauceNAO
 from PicImageSearch.model import SauceNAOItem, SauceNAOResponse
 
-from . import SEARCH_RESULT_TYPE, bot
+from . import SEARCH_RESULT_TYPE
 from .config import config
 from .ehentai import ehentai_title_search
 from .nhentai import nhentai_title_search
@@ -28,9 +28,7 @@ SAUCENAO_DB = {
 
 
 @async_lock(freq=8)
-async def saucenao_search(
-    file: bytes, client: AsyncClient, mode: str
-) -> SEARCH_RESULT_TYPE:
+async def saucenao_search(file: bytes, client: AsyncClient, mode: str) -> SEARCH_RESULT_TYPE:
     db = SAUCENAO_DB[mode]
     if isinstance(db, list):
         saucenao = SauceNAO(
@@ -46,11 +44,7 @@ async def saucenao_search(
         )
     res = await saucenao.search(file=file)
 
-    if (
-        res
-        and res.status == 429
-        and "4 searches every 30 seconds" in res.origin["header"]["message"]
-    ):
+    if res and res.status == 429 and "4 searches every 30 seconds" in res.origin["header"]["message"]:
         return await saucenao_search(file, client, mode)
 
     if not res or not res.raw:
@@ -60,14 +54,10 @@ async def saucenao_search(
     return await get_final_res(file, client, res, selected_res)
 
 
-def get_best_pixiv_result(
-    res: SauceNAOResponse, selected_res: SauceNAOItem
-) -> SauceNAOItem:
+def get_best_pixiv_result(res: SauceNAOResponse, selected_res: SauceNAOItem) -> SauceNAOItem:
     pixiv_res_list = list(
         filter(
-            lambda x: x.index_id == SAUCENAO_DB["pixiv"]
-            and x.url
-            and abs(x.similarity - selected_res.similarity) < 5,
+            lambda x: x.index_id == SAUCENAO_DB["pixiv"] and x.url and abs(x.similarity - selected_res.similarity) < 5,
             res.raw,
         )
     )
@@ -124,11 +114,7 @@ async def get_final_res(
     if res.long_remaining < 10:
         final_res.append((f"SauceNAO 24h 内仅剩 {res.long_remaining} 次使用次数", None))
 
-    if _thumbnail := await get_bytes_by_url(selected_res.thumbnail):
-        thumbnail = await bot.upload_file(_thumbnail, file_name="image.jpg")
-    else:
-        thumbnail = None
-
+    thumbnail = await get_bytes_by_url(selected_res.thumbnail)
     final_res.append(("\n".join([i for i in res_list if i]), thumbnail))
 
     if selected_res.index_id in SAUCENAO_DB["anime"]:  # type: ignore
