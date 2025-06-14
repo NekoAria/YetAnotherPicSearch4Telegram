@@ -126,6 +126,6 @@ async def get_final_res(res: Ascii2DResponse, bovw: bool = False, duplicated_cou
             break
 
     final_res_list_str = SEPARATOR.join(final_res_list)
-    via_link = f"Via: {get_hyperlink(res.url)}"
+    via_link = f"Via: {get_hyperlink(res.url.replace(config.ascii2d_base_url, 'https://ascii2d.net'))}"
     final_res += f"\n\n{final_res_list_str}\n\n{via_link}"
     return final_res, thumbnail_list
