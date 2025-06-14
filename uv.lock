@@ -503,16 +503,16 @@ wheels = [
 
 [[package]]
 name = "picimagesearch"
-version = "3.12.8"
+version = "3.12.9"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
     { name = "lxml" },
     { name = "pyquery" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/1b/17/fbdfb9a4e2bfb3c9e7095ba2f7332411c17d5327272bc25660e8262c2014/picimagesearch-3.12.8.tar.gz", hash = "sha256:e2a62c0d914895cf8887824642efb3ecc6757a521f750b9563c5ec602843f003", size = 47279, upload-time = "2025-05-30T07:09:39.571Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/29/4a/64627c8625eabcba8fdc763c8dceb244d980e91a3ee2145c269b8a3d76f3/picimagesearch-3.12.9.tar.gz", hash = "sha256:22fd40e807a1ed9f653de1a56b19047c196870d6a81730f895ecc4509e5ccfb5", size = 617255, upload-time = "2025-06-14T09:58:33.875Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/28/78/a21a2e7b9ba918753d48e600d837f5b838ad3037b645d590c3b936550936/picimagesearch-3.12.8-py3-none-any.whl", hash = "sha256:a37d962a1305ed827a4210872de07897737d9113da7efd80878948e9b55d61b8", size = 68512, upload-time = "2025-05-30T07:09:38.032Z" },
+    { url = "https://files.pythonhosted.org/packages/ef/31/219483adef072211f0e36a5cb750d85968c56f20f74783f377e2edd1cf74/picimagesearch-3.12.9-py3-none-any.whl", hash = "sha256:a9e77d22166301c183eff844e907572e8a2ce409111473d5e5897f3ab20cce80", size = 68271, upload-time = "2025-06-14T09:58:32.648Z" },
 ]
 
 [[package]]
@@ -1062,7 +1062,7 @@ requires-dist = [
     { name = "imageio", specifier = ">=2.37.0" },
     { name = "loguru", specifier = ">=0.7.3" },
     { name = "lxml", specifier = ">=5.4.0" },
-    { name = "picimagesearch", specifier = ">=3.12.8" },
+    { name = "picimagesearch", specifier = ">=3.12.9" },
     { name = "pillow", specifier = ">=11.2.1" },
     { name = "pydantic", specifier = ">=2.11.7" },
     { name = "pydantic-settings", specifier = ">=2.9.1" },
