@@ -5,7 +5,7 @@ from httpx import AsyncClient
 from PicImageSearch import Google
 from PicImageSearch.model import GoogleResponse
 
-from . import SEARCH_RESULT_TYPE, bot, config
+from . import SEARCH_RESULT_TYPE
 from .utils import async_lock, get_hyperlink
 
 

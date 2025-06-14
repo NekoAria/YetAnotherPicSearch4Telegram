@@ -8,7 +8,8 @@ from PicImageSearch.model import Ascii2DItem, Ascii2DResponse
 from PicImageSearch.model.ascii2d import URL
 from PIL import Image
 
-from . import SEARCH_RESULT_TYPE, config
+from . import SEARCH_RESULT_TYPE
+from .config import config
 from .utils import (
     SEPARATOR,
     async_lock,
@@ -80,11 +81,10 @@ def build_source_list(url_list: list[URL]) -> list[str]:
     while index < len(url_list):
         url = url_list[index]
         if any(source in url.href for source in SUPPORTED_SOURCES):
-            source_list.append(
-                f"[{get_website_mark(url.href)}]"
-                f" {get_hyperlink(url.href, url.text)} -"
-                f" {get_hyperlink(url_list[index + 1].href, url_list[index + 1].text)}"
-            )
+            website_mark = get_website_mark(url.href)
+            first_link = get_hyperlink(url.href, url.text)
+            second_link = get_hyperlink(url_list[index + 1].href, url_list[index + 1].text)
+            source_list.append(f"[{website_mark}] {first_link} - {second_link}")
             index += 1
         else:
             source_list.append(get_hyperlink(url.href, url.text))
@@ -105,9 +105,8 @@ async def get_final_res(res: Ascii2DResponse, bovw: bool = False, duplicated_cou
         if not (r.title or r.url_list):
             continue
 
-        # TODO: 修改 PicImageSearch 中的 ascii2d model 中的 thumbnail 赋值逻辑，重点是其 host
-        # thumbnail = await get_bytes_by_url(r.thumbnail)
-        thumbnail = await get_bytes_by_url(r.thumbnail.replace("https://ascii2d.net", config.ascii2d_base_url))
+        thumbnail = await get_bytes_by_url(r.thumbnail)
+        # thumbnail = await get_bytes_by_url(r.thumbnail.replace("https://ascii2d.net", config.ascii2d_base_url))
 
         # If thumbnail is in gif format, only take the first frame
         if thumbnail and thumbnail[:3] == b"GIF":
@@ -120,7 +119,9 @@ async def get_final_res(res: Ascii2DResponse, bovw: bool = False, duplicated_cou
 
         res_list = [r.detail, title, source]
         final_res_list.append("\n".join([i for i in res_list if i]))
-        thumbnail_list.append(thumbnail)
+
+        if thumbnail:
+            thumbnail_list.append(thumbnail)
 
         if len(final_res_list) == 3:
             break
