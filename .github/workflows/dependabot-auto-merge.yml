@@ -1,0 +1,65 @@
+name: Dependabot auto-merge
+on: pull_request
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  dependabot:
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.login == 'dependabot[bot]'
+    steps:
+      - name: Dependabot metadata
+        id: metadata
+        uses: dependabot/fetch-metadata@v2
+        with:
+          github-token: "${{ secrets.GITHUB_TOKEN }}"
+
+      # Checkout PR and validate uv lock file
+      - name: Checkout PR
+        uses: actions/checkout@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v7
+
+      - name: Validate uv.lock
+        id: validate_lock
+        run: |
+          echo "Validating uv.lock file..."
+          if uv sync --locked; then
+            echo "lock_file_valid=true" >> $GITHUB_OUTPUT
+            echo "✅ uv.lock validation passed"
+          else
+            echo "lock_file_valid=false" >> $GITHUB_OUTPUT
+            echo "❌ uv.lock validation failed"
+          fi
+
+      # Auto-merge only if lock file is valid and meets criteria
+      - name: Enable auto-merge for Dependabot PRs
+        if: |
+          steps.validate_lock.outputs.lock_file_valid == 'true' &&
+          (steps.metadata.outputs.update-type == 'version-update:semver-patch' ||
+           steps.metadata.outputs.dependency-type == 'direct:development')
+        run: gh pr merge --auto --squash "$PR_URL"
+        env:
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Add comment if lock file validation fails
+      - name: Comment on invalid lock file
+        if: steps.validate_lock.outputs.lock_file_valid == 'false'
+        run: |
+          gh pr comment ${{ github.event.pull_request.number }} --body "❌ **Automatic merge failed**
+
+          Validation of uv.lock failed. Possible reasons:
+          - Dependency conflicts with other PRs
+          - Corrupted or inconsistent lock file
+
+          Please manually check and fix this PR, or wait for other PRs to merge first and then retry.
+
+          You can try running \`@dependabot recreate\` to regenerate this PR."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
